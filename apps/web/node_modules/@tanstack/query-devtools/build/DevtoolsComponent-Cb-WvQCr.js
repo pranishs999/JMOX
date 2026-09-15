@@ -1,0 +1,2 @@
+import{L as e,V as t,a as n}from"./utils-BPMMmTje.js";import{a as r,c as i,i as a,n as o,o as s}from"./Devtools-CFKbGy8Z.js";const c=c=>{let[l,u]=i({prefix:`TanstackQueryDevtools`}),d=n(),f=t(()=>{let e=c.theme||l.theme_preference||`system`;return e===`system`?d():e});return e(s.Provider,{value:c,get children(){return e(r,{localStore:l,setLocalStore:u,get children(){return e(a.Provider,{value:f,get children(){return e(o,{localStore:l,setLocalStore:u})}})}})}})};export{c as default};
+//# sourceMappingURL=DevtoolsComponent-Cb-WvQCr.js.map
