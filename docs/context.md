@@ -1,1206 +1,400 @@
 # JMOX — Project Context
 
-> **Project:** Junior Mathematics Olympiad (JMO) Management System  
-> **Product name:** JMOX  
-> **Specification:** v2.0  
-> **Status:** Architecture and core requirements confirmed  
-> **Purpose:** Institutional management system for Junior Mathematics Olympiad operations
+> **Project:** JMOX — Institute Management & Olympiad Platform  
+> **Specification:** v1.0 (Phase 1)  
+> **Status:** Phase 1 spec stable — see §0 for the versioning convention and §39 for the phase roadmap  
+> **Purpose:** Multi-role institute platform covering academics, attendance, examinations, OMR, Olympiads, rankings, notifications, learning materials, and books.
+
+This is the source-of-truth document. Where anything elsewhere in the document set conflicts with this file, this file wins (§40, Golden Rule).
+
+**Document set:** `context.md` (this file) · [requirements.md](requirements.md) (PRD/SRS) · [database-design.md](database-design.md) · [architecture-api.md](architecture-api.md) · [ui-ux-design.md](ui-ux-design.md) · [security-testing-deployment.md](security-testing-deployment.md) · [audit-notes.md](audit-notes.md) (what changed and why).
+
+---
+
+## 0. Versioning Convention
+
+**Major version = phase number. Minor version = a revision within that phase.**
+
+- Each phase's spec starts at `vX.0` when that phase's features are actually being specified/built — not before.
+- Fixes, clarifications, and small scope adjustments *within* a phase bump the minor version: `vX.1`, `vX.2`, ...
+- The next phase only begins (`v(X+1).0`) once work on that phase's features actually starts. Writing a roadmap entry for a future phase (§39) does not bump the version — planning isn't building.
+- Every document in the set (this file, requirements.md, database-design.md, etc.) shares the same `vX.Y` label at any given time, so the whole set stays traceable to one phase/revision together — don't let individual docs drift to different version numbers.
+
+This document is currently **v1.0** — the first stable cut of Phase 1. Phase 1 itself went through pre-history revisions before settling here (below); those aren't part of this numbering, since Phase 1 hadn't stabilized yet.
+
+### Pre-v1.0 history (reference only — not part of the phase-based version line)
+- An early draft scoped a narrower, single-institution Math Olympiad manager: React+Vite web, a separate Android app, two roles (Admin, Teacher), no student login. Fully superseded before Phase 1 was finalized.
+- That draft was rebuilt around the real Phase 1 feature list: single Flutter/Dart codebase, three roles (Admin, Facilitator/Mentor, Student), multi-institute data isolation, Examinations alongside Olympiads, notifications, materials, books.
+- The backend assumption was then corrected: no custom server — Supabase-native (Auth, Postgres, Storage, Realtime, Edge Functions), OMR moved on-device, Redis (Upstash) added narrowly for rate limiting/ranking cache.
+
+That corrected, settled state is what **v1.0** formalizes. The next version bump (`v1.1`) is whatever the first post-v1.0 fix/clarification turns out to be; `v2.0` doesn't happen until Phase 2 (§39) work actually starts.
 
 ---
 
 ## 1. Project Summary
 
-JMOX is a complete web + Android management system for running the Junior Mathematics Olympiad.
+JMOX is a platform institutes use to run their academic operations end to end: enrolling students, tracking attendance, running examinations and Olympiads, scoring via OMR or manual entry, computing rankings, and distributing learning materials — with role-appropriate dashboards for Admins, Facilitators/Mentors, and Students.
 
-The system manages:
-
-- Students
-- Teachers
-- Classes
-- Batches
-- Academic years
-- Sessions
-- Attendance
-- Monthly Mini Olympiads
-- Annual Full Olympiad
-- Olympiad papers
-- Paper versions
-- Sections
-- Syllabus
-- Topics
-- Questions
-- Question options
-- Answer keys
-- Student answers
-- Manual evaluation
-- OMR scanning and review
-- Assessment results
-- Rankings
-- Student performance
-- Academic history
-- Awards
-- Certificates
-- Reports
-- Exports
-- User accounts
-- Authentication
-- Authorization
-- Audit logs
-- System settings
-- Custom student fields
-
-JMOX is intended for real institutional use. Data correctness, security, reliable assessment calculations, and historical preservation are more important than visual polish.
+Phase 1 delivers the complete core platform. Phase 2+ is intentionally undefined (§39).
 
 ---
 
-## 2. Product Principles
+## 2. Roles
 
-Priority order:
+Exactly three roles in Phase 1:
 
-1. Data correctness
-2. Security
-3. Permission control
-4. Reliable assessment calculations
-5. Easy teacher workflows
-6. Historical data preservation
-7. API reliability
-8. Mobile support
-9. Performance
-10. Visual polish
+- **Admin** — full control within their institute.
+- **Facilitator/Mentor** — manages assigned classes/batches/subjects: attendance, exams, marks, OMR, results, materials, olympiads (for their scope), and messaging down to students.
+- **Student** — has a login, sees their own academic data, materials, books, and results; cannot manage other students' data.
 
-### Absolute rules
+Role-based access control (RBAC) applies to every resource and every client (Android, iOS, Web) identically — the same permission rules, not per-platform variants.
 
-- Never sacrifice data integrity for UI convenience.
-- Never trust frontend authorization.
-- Important business logic must live on the backend.
-- Historical academic and Olympiad records must be preserved.
-- Published results must not silently change.
-- Published-paper/answer-key history must be immutable.
-- Do not use fake buttons or mock data in place of real functionality.
-- Incomplete functionality must be explicitly marked as incomplete.
-- Do not invent requirements.
+**Naming rule:** use "Facilitator/Mentor" (or "Facilitator" for brevity in code/UI labels) consistently — not "Teacher." "Teacher" is a pre-v1.0 term and must not reappear in this document set.
 
 ---
 
-# 3. Users and Roles
+## 3. Institutes & Multi-Tenancy
 
-## 3.1 Admin
+Institute is a first-class, managed entity in Phase 1 — not a "readiness" placeholder for later.
 
-Admin has full system access.
-
-Admin can manage:
-
-- Students
-- Teachers
-- Classes
-- Batches
-- Teacher/student assignments
-- Academic years
-- Olympiads
-- Papers
-- Sections
-- Questions
-- Answer keys
-- Evaluation
-- Results
-- Rankings
-- Attendance
-- Syllabus
-- Topics
-- Awards
-- Certificates
-- Reports
-- Exports
-- Users
-- Custom fields
-- Settings
-- Audit logs
-
-### Account provisioning
-
-Admin is the sole authority for account creation.
-
-There is no public registration.
+- Every Admin, Facilitator, Student, and every academic/operational record belongs to exactly one Institute.
+- **Institute-level data isolation is enforced now**: no query may return another institute's data, no file may be reachable across institutes, no search/report may leak across the boundary.
+- An Institute has: profile (name, logo, contact details, address) and settings (academic-year conventions, notification preferences, default ranking scopes, etc. — extend as needed, don't invent beyond what's requested).
+- **Assumption (flag if wrong):** each institute has its own Admin(s); Phase 1 does not include a cross-institute "platform super-admin" role that manages multiple institutes at once. If that's needed, it's a Phase 2 decision.
 
 ---
 
-## 3.2 Teacher
+## 4. Academic Structure
 
-Teacher can:
+Hierarchy: **Institute → Academic Year → Batch → Class → Subject**, with Facilitators and Students attached at the Batch/Class level.
 
-- View assigned batches
-- View students in permitted batches
-- Record attendance
-- View attendance history
-- Enter student answers
-- Upload OMR sheets
-- Review OMR results
-- Confirm evaluation
-- View assigned Olympiad results
-- View student performance
-- Generate permitted reports
-
-Teacher must never access or modify unrelated batches or administrative data.
-
-The backend must enforce permissions. Hiding UI controls is not sufficient.
+- **Academic Year**: has a date range, an active flag (one active year per institute at a time), and can be archived. Archiving preserves history — it does not delete data (§37).
+- **Batch**: a group of students taught together, scoped to a Class and Academic Year.
+- **Class**: a grade/level grouping (data-driven, admin-creatable — do not hard-code a fixed list).
+- **Subject**: a subject taught (e.g., Mathematics, Science) — new in this Phase 1 spec (added during the pre-v1.0 Flutter rebuild). Facilitators are assigned to subjects; students are associated with subjects via their batch/class; exams and materials are scoped by subject.
+- **Academic-year history**: students, facilitators, and results all carry their academic-year context permanently, so past years remain queryable after a year is archived.
 
 ---
 
-## 3.3 Student
+## 5. Student Management
 
-### v1 rule
-
-Students do **not** have accounts and do **not** log in.
+- Student profile: personal info, public student ID (§36), academic year, batch, class, subjects, academic history, attendance history, examination history, Olympiad history, ranking history.
+- Students have their own login (Phase 1 — this is new relative to the earlier pre-v1.0 draft) and see their own data via the Student Dashboard (§20) and app areas — not other students' data.
+- Admin assigns students to batches/classes; changes preserve history (§37) rather than overwriting it.
 
 ---
 
-# 4. Role Model
+## 6. Facilitator/Mentor Management
 
-v1 has exactly two fixed application roles:
+- Facilitator profile: assigned batches, classes, subjects, and the resulting student lists.
+- A Facilitator's permissions are scoped to their assignments: they manage attendance, exams, marks entry, results, OMR, and material uploads only for batches/classes/subjects they're assigned to (§2).
+- A Facilitator can message (notify) only students within their own assigned scope (§21).
 
+---
+
+## 7. Attendance
+
+Two entry methods, one record model:
+
+### 7.1 QR Attendance
+- Every student has a unique QR code (their public student ID, encoded).
+- Facilitator scans it via the JMOX mobile app; the system auto-identifies the student and validates batch/class/session match before recording.
+- Duplicate scans for the same student+session are rejected (idempotent), not recorded twice.
+- Dedicated ESP32 hardware scanners and **RFID-based attendance** are **explicitly out of scope for Phase 1** — QR scanning (app camera) and manual entry are the two Phase 1 methods, full stop.
+
+### 7.2 Manual Attendance
+- Facilitator marks Present/Absent/Late directly.
+- Attendance is editable after recording, with an audit trail (who recorded it, who last changed it, when — §37 timestamp rule applies).
+
+### 7.3 Records & Sync
+- Daily and monthly attendance views, attendance percentage, per-student/batch/class history, exportable reports.
+- Attendance can be recorded offline (Android/iOS) and synced later (§23). Conflict rule: if a server record already exists for a given (student, session), it wins; the incoming offline write is rejected and logged for review, not silently discarded and not resolved by comparing client-supplied timestamps (client clocks aren't trustworthy for that).
+
+---
+
+## 8. Examination System
+
+General, subject-based exams — distinct from Olympiads (§9), but sharing the same underlying content/scoring machinery (§10, §11) so the two aren't built twice.
+
+- Admin/Facilitator creates and edits exams, assigns them to specific batches/classes, and picks the subject.
+- Each exam has questions (built via the shared Question/Section/Paper model, §10), marks configuration (marks + negative marks per question, decimal-safe — see the marking rule in §11), and a schedule.
+- Marks entry: manual or via OMR (§11).
+- Results and result history are visible per student, per exam, with exportable result reports.
+
+---
+
+## 9. Olympiad System
+
+Two recurring Olympiad types, both built on the same content/scoring machinery as Exams:
+
+- **Monthly Olympiad**: created per month; has its own question set, participant list, scoring, results, and **Monthly ranking**.
+- **Yearly Olympiad**: created per academic year; same structure, with its own **Yearly ranking**.
+
+Monthly and Yearly Olympiads are tracked as separate entities with separate results and separate rankings — a student's Monthly Olympiad standing does not roll up automatically into the Yearly one (Yearly is its own competition, not a sum of Monthly results, unless a future phase explicitly says otherwise).
+
+---
+
+## 10. Shared Content Model (Papers, Sections, Questions)
+
+Both Exams and Olympiads are built from the same primitives, so the platform doesn't maintain two parallel authoring systems:
+
+- **Paper** — belongs to either an Exam or an Olympiad (one or the other, not both), targets a Class, has a version and a lock state.
+- **Section** — groups questions within a paper, has a sort order (which also drives tie-break precedence, §11).
+- **Question** — belongs to a section; has text, options, marks, and negative marks.
+- **AnswerKey** — versioned alongside its paper; locked once results are published against it.
+
+Sections and marking schemes are configurable per paper/subject — never hard-code a fixed set of section names or a fixed subject list.
+
+---
+
+## 11. Scoring, OMR, and Results
+
+### 11.1 Marking
+- Each question carries its own `marks` (points if correct) and `negative_marks` (points deducted if incorrect, default 0). Both must support **fractional values** (e.g., +2 / −0.5) — never store these as integers.
+- Unanswered questions score 0 (no penalty).
+- A paper's total score is the sum across all its questions; can be negative in theory.
+
+### 11.2 Evaluation Types
+A question can be evaluated one of three ways; the paper/question record must carry which:
+- **Multiple choice** — extracted/entered option compared directly against the answer key (`marks` if match, `−negative_marks` if not).
+- **Numerical** — exact match, or a configurable tolerance range (e.g., expected `9.81`, accepted `9.80–9.82`). Tolerance is per-question, not global.
+- **Short answer** — deferred auto-grading. AI-assisted evaluation may be added later, but **must never assign a final mark without a Facilitator/Mentor reviewing it first** — automated grading can be confidently wrong. Treat every AI-suggested short-answer mark as a draft suggestion, not a result, until a human confirms it.
+
+### 11.3 OMR — On-Device Processing (not server-side)
+Unlike earlier drafts of this document, OMR is processed **on the scanning device** (Android/iOS, via the Flutter app), not by a backend server — there is no persistent custom server process in this architecture (§24) to run it on, and Edge Functions aren't suited to sustained image-processing workloads.
+
+**Pipeline:**
 ```text
-admin
-teacher
+Camera
+  → Capture image
+  → Detect OMR sheet
+  → Find corner/reference markers
+  → Perspective correction
+  → Crop answer area
+  → Grayscale
+  → Threshold/binarization
+  → Contour/bubble detection
+  → Calculate filled-area / dark-pixel ratio per bubble
+  → Determine selected option (highest fill ratio, above a configurable confidence threshold)
+  → Generate extracted answers
+  → Compare with answer key
+  → Calculate score
+  → Facilitator quick-confirms on-screen (see below)
+  → Store result in Supabase
 ```
 
-Do not build a configurable Role/Permission management system unless the specification is explicitly revised.
+Bubble determination example: for a 4-option question, compare dark-pixel ratio across A/B/C/D and pick the highest, e.g. `A=8%, B=73%, C=11%, D=7% → B`. Thresholds are configurable and must be tuned against real printed/scanned sheets, not assumed.
 
-Permissions are enforced server-side in FastAPI.
+**OMR sheet design:** purpose-built for computer vision, not arbitrary paper layout — includes an exam identifier, an encoded student ID region, corner/reference markers for boundary detection and perspective correction, and a fixed bubble grid. Do not attempt to recognize arbitrary/free-form answer sheets.
 
----
+**Implementation approach (choose per platform maturity, don't over-decide upfront):**
+- *Approach A — Flutter OpenCV package:* Dart calls into a Flutter package wrapping OpenCV. Simpler to build and maintain; adequate for early development and testing.
+- *Approach B — Native OpenCV via platform channel/FFI:* Flutter owns UI, camera, exam/student selection, and Supabase communication; native Android/iOS code (via platform channel or FFI) owns the actual image processing (grayscale, threshold, contour detection, perspective correction, bubble detection). More robust and performant for production; the two aren't mutually exclusive — start with A, move hot paths to B if A's performance/accuracy isn't sufficient.
 
-# 5. Academic Structure
+**Human-in-the-loop:** after on-device extraction, the Facilitator sees the detected answers on-screen and confirms before anything is stored as a result — OMR never silently auto-finalizes. Any bubble the on-device confidence threshold couldn't call cleanly is flagged for the Facilitator's specific attention rather than requiring a full manual re-check of every question.
 
-## 5.1 Classes
+**Submission states:** `pending → processing → needs_review → confirmed | failed`, with retry/manual-fallback on failure. `processing` now refers to on-device processing time, not a server queue.
 
-Initial classes:
+**Offline:** a Facilitator can scan OMR sheets while offline; extraction still happens on-device (it doesn't need connectivity), and only the confirmed result queues for sync once reconnected (§23).
 
-- Class 1
-- Class 2
-- Class 3
-
-Classes are data-driven and must not be hard-coded.
-
-Admin must be able to create additional classes later.
-
----
-
-## 5.2 Batches
-
-A batch is a teacher-managed group of students.
-
-The system must support:
-
-- Multiple batches per teacher
-- Different classes per teacher
-- Multiple students per batch
-- Teacher assignment
-- Student assignment
-- Historical batch assignments
-
-Do not assume:
-
-- one teacher = one batch
-- one batch = one class
+### 11.4 Results
+- Lifecycle: `draft → reviewed → published`. `draft` is the scored-but-unconfirmed state (this is where OMR/manual evaluation lands); `reviewed` means a Facilitator/Admin checked it; `published` is final and visible to the student, and locks the paper/answer key.
+- Unpublishing (Admin only) moves a result back to `reviewed`, requires a reason, and is audited. A paper/answer-key stays locked as long as any of its results remain `published`.
+- Result reports and result history are available per exam/olympiad, per student, per batch/class.
 
 ---
 
-## 5.3 Academic Years
+## 12. Ranking System
 
-Academic years are first-class entities.
+Two independent ranking axes, applied separately to Monthly Olympiad results and Yearly Olympiad results (§9) — Exams (§8) are scored/reported but are not described as producing "rankings" in Phase 1 scope, so don't add ranking UI for plain exams unless asked:
 
-Student enrollment, class membership, batch membership, sessions, and attendance should preserve academic-year history.
+- **Batch ranking** and **Class ranking** — the two population scopes explicitly in scope. (Do not add an "overall/cross-institute" scope; it isn't in the Phase 1 feature list — flag it as a future idea if it comes up, don't build it silently.)
+- Standard competition ranking (1-2-2-4: tied students share a rank, the next distinct score skips accordingly).
+- Tie-break: total score → each section's score in the paper's configured section order → same rank if still tied. Sections aren't hard-coded (§10), so this must read the paper's actual section order, not a fixed name list.
+- Percentage-normalized comparison is used wherever papers being compared don't share the same maximum marks.
+- Rankings recompute when results are republished; prior ranking snapshots are preserved, not overwritten.
+- Leaderboards and rank history are visible per the role's scope (§2): a Student sees their own rank history; a Facilitator sees their assigned batches/classes; Admin sees everything in their institute.
+- Leaderboard reads are cached (§24, Redis) — computed rankings don't need to be recalculated on every page view, only when results are republished.
 
 ---
 
-# 6. JMO Schedule
+## 13. Notification System
 
-Default JMO schedule:
-
-- 2 classes per week
-- 2 hours per class
-
-Sessions belong to JMO teaching sessions, not to a generic school timetable.
-
-Default model:
+One-directional cascade — no upward messaging in Phase 1:
 
 ```text
-Week N
-  ├── Session 1
-  └── Session 2
+Admin       → Facilitator/Mentor
+Admin       → Student
+Facilitator → Student
 ```
 
-Sessions are auto-generated per batch from the weekly schedule.
-
-Manual overrides must support holidays and cancellations.
+- Delivery: push notification (via **FCM — Firebase Cloud Messaging**, triggered from Supabase Edge Functions/DB triggers, §24) + in-app notification.
+- Notification center per user: read/unread status, history.
+- Delivery status tracked "where applicable" (i.e., don't block on guaranteed push delivery receipts if the underlying push provider doesn't support them — track what's available).
+- A Facilitator may only notify students within their own assigned scope (§6).
 
 ---
 
-# 7. Attendance
+## 14. Learning Materials
 
-## 7.1 Attendance states
+- Upload types: PDF, documents, images, notes.
+- Associated with Subject, Batch, Class, and Academic Year (any combination — a material can be broad or narrow).
+- View/download, with role-based access matching §2 scoping (a Facilitator only manages materials for their own scope; a Student only sees materials for their own batch/class/subjects).
 
-Allowed states:
+---
 
-- Present
-- Absent
-- Late
-- Excused
+## 15. Books
 
-## 7.2 Teacher workflow
+Institute-provided, free/basic resources — **no paid or marketplace functionality in Phase 1.**
+
+- Upload with metadata, associated with Subject and Batch/Class.
+- Student library: browse, view, access.
+- Book management (Admin/Facilitator, scoped as usual).
+
+---
+
+## 16. Dashboards
+
+Three role-specific dashboards, each surfacing only what that role can act on (§2):
+
+- **Admin**: institute-wide overview across students, facilitators, academic years, batches, classes, subjects, attendance, exams, results, OMR, Olympiads, rankings, notifications, materials, books.
+- **Facilitator/Mentor**: their assigned classes/batches/students, attendance, exams, marks, results, OMR, materials, Olympiads (within scope), notifications.
+- **Student**: their own profile, academic year/batch/class/subjects, attendance, exams, results, Olympiad results, rankings, materials, books, notifications.
+
+---
+
+## 17. Reports, Search, Filtering & Sorting, Import/Export
+
+- **Reports**: student, attendance, exam, result, OMR, Monthly Olympiad, Yearly Olympiad, Monthly ranking, Yearly ranking, batch, class — all exportable.
+- **Search**: global/contextual across students, facilitators, books, materials, exams, olympiads — always filtered by the searching user's role/permissions (§2); never a bypass around scoping.
+- **Filtering**: by academic year, batch, class, subject, attendance status, exam, olympiad, ranking.
+- **Sorting**: by name, date, score, percentage, rank, attendance percentage, and other relevant fields per list.
+- **Import**: student data (and basic institute data where applicable), CSV.
+- **Export**: student, attendance, examination, result, ranking data, and reports — CSV.
+
+---
+
+## 18. File & Storage Management
+
+- Covers: student files, learning materials, books, OMR scans, result documents, institute files.
+- Secure, role-based access; files are organized (not a flat bucket); **institute-level file isolation** is enforced the same way data isolation is (§3) — a file belonging to one institute must never be reachable by another institute's users, even by a guessed URL.
+
+---
+
+## 19. Security
+
+- Authentication security via **Supabase Auth** (hashed credentials, secure session/token handling — Supabase-managed, not custom).
+- **RBAC + institute isolation are enforced by PostgreSQL Row-Level Security (RLS) policies**, since there's no custom backend layer to gate access in application code (§24). Every table with an `institution_id` and/or role-scoped access needs an explicit RLS policy — the Flutter client talks to Supabase directly, so RLS is the real authorization boundary, not a UI-level restriction.
+- Anything that genuinely can't be expressed as an RLS policy (complex cross-table validation, privileged aggregate operations) runs in a Supabase Edge Function using the service-role key server-side — the service-role key must never reach the client (§29).
+- Session management, rate limiting (Redis/Upstash on Edge Functions, §24), secure file access (Storage RLS/signed URLs).
+- Audit logs (§20).
+- Account disablement (Admin can disable any account in their institute).
+- Institute-level data isolation (§3) enforced by RLS, not just by convention.
+- Permission validation on every mutating request/Edge Function, not just RLS on reads.
+
+---
+
+## 20. Audit & Activity History
+
+Track administrative actions: who performed it, what action, which record, when, and the resulting status. Examples explicitly called out by the feature list: student created/updated/disabled, attendance corrected, marks changed, exam created, book uploaded, material uploaded, account changed. Treat this as illustrative, not exhaustive — any state-changing administrative action should be audited.
+
+---
+
+## 21. Operation Status & Error Handling
+
+Standard status vocabulary for any non-instant operation (mobile sync, OMR processing, imports, etc.), used consistently across the whole platform rather than each feature inventing its own:
 
 ```text
-Login
-→ My Batches
-→ Select Batch
-→ Select Session/Date
-→ Mark Students
-→ Save
+loading → pending → processing → (success/completed) | failed | conflict
 ```
 
-## 7.3 Rules
-
-- Prevent duplicate attendance for the same student + session.
-- Attendance is historical.
-- Attendance is auditable.
-- Student profile must show attendance totals and percentage.
-
-Student attendance summary:
-
-- Present count
-- Absent count
-- Late count
-- Excused count
-- Attendance percentage
+Retry is always offered where a failure is retryable. This vocabulary is especially load-bearing for mobile sync (§22–23) and OMR (§11.2) — use these exact states, don't invent parallel ones per feature.
 
 ---
 
-# 8. Student Records
+## 22. Mobile Offline System
 
-## 8.1 Personal information
+- **Android**: fully offline-capable — local storage of previously synced data, offline attendance, offline drafts, offline OMR queue, sync queue, automatic sync, retry-on-failure, conflict handling, sync status.
+- **iOS**: same offline capabilities as Android (new in this Phase 1 spec — iOS was explicitly future/out-of-scope in the earlier pre-v1.0 draft; it is in-scope now).
+- **Web**: online-only, no offline mode — this is a deliberate simplification, not an oversight. Do not build offline support into the web target.
 
-Student fields:
+---
 
-- public student ID
-- first name
-- middle name
-- last name
-- date of birth
-- gender
-- photo
-- phone
-- email
-- address
+## 23. Data Synchronization
 
-## 8.2 Guardian information
-
-- name
-- relationship
-- phone
-- email
-- address
-
-## 8.3 JMO information
-
-- class
-- batch
-- enrollment date
-- status
-- teacher
-- academic history
-
-Allowed student statuses:
+For Android and iOS:
 
 ```text
-Active
-Inactive
-Graduated
-Withdrawn
+Online
+  → Synchronize data
+  → Local database
+  → Offline changes
+  → Sync queue
+  → Connection restored
+  → Upload changes
+  → Server validation
+  → Success / Conflict / Retry
 ```
 
-## 8.4 Performance
-
-Student profile must support:
-
-- Attendance
-- Olympiad participation
-- Scores
-- Percentages
-- Rankings
-- Section performance
-- Topic performance
-- Awards
-- Certificates
-- Academic history
-- Improvement over time
+Requirements: automatic sync, manual retry where needed, failed-sync retry, conflict detection and resolution (§7.3's "existing server record wins" rule is the general pattern — apply it consistently to any syncable entity, not just attendance), sync status visible to the user, and data consistency as the non-negotiable outcome (never silently drop a conflicting write — log it, surface it).
 
 ---
 
-# 9. Student Custom Fields
+## 24. Platform & Tech Stack
 
-Admin must be able to create flexible custom student fields.
-
-Examples:
-
-- School Name
-- Previous Olympiad
-- Special Notes
-- Emergency Contact
-- Custom Identifier
-
-Do not hard-code every future student field into the Student table.
-
-### Custom field rules
-
-- Fields are soft-deleted/deprecated.
-- Never hard-delete fields that may have historical values.
-- Changing a custom field's type creates a new field rather than mutating the existing field.
-- Historical CustomFieldValue records must remain valid.
-
----
-
-# 10. Historical Data Preservation
-
-Historical data is a core requirement.
-
-When a student changes:
-
-- class
-- batch
-- teacher
-- academic year
-
-the previous information remains accessible.
-
-Historical Olympiad results must remain tied to the student's state at the time of the exam.
-
-A later class/batch change must never rewrite a published historical result.
-
----
-
-# 11. Olympiad Types
-
-JMOX supports two assessment types:
-
-## Monthly Mini Olympiad
-
-Recurring monthly assessment.
-
-## Annual Full Olympiad
-
-Yearly major assessment.
-
-Both must use the same flexible assessment architecture.
-
----
-
-# 12. Olympiad Paper
-
-Each Olympiad may have different papers for different classes.
-
-Paper configuration includes:
-
-- name
-- class
-- Olympiad
-- time limit
-- total marks
-- sections
-- questions
-- syllabus
-- answer key
-
-Papers are versioned.
-
-Important fields include:
-
-- version
-- locked_at
-
-### Immutability rule
-
-Once any linked result is published:
-
-- paper becomes immutable
-- answer key becomes immutable
-- future edits require a new version
-- historical results continue using the old version
-
-Never modify a published paper in-place.
-
----
-
-# 13. Paper Sections
-
-Sections are configurable.
-
-A section may contain:
-
-- name
-- description
-- number of questions
-- marks per question
-- total marks
-- topics
-- question types
-
-Do not hard-code section names.
-
-Possible examples:
-
-- Logical Reasoning
-- Mathematical Reasoning
-- Everyday Mathematics
-- Achievers Section
-
-These are examples, not fixed system sections.
-
----
-
-# 14. Example Class 1 Paper
-
-Reference example only:
+**One Flutter/Dart codebase, Supabase-native backend.** Both are hard constraints, confirmed as of v1.0, and not to be revisited without explicitly renegotiating this document:
 
 ```text
-Logical Reasoning       10 questions × 1 = 10
-Mathematical Reasoning  10 questions × 1 = 10
-Everyday Mathematics    10 questions × 1 = 10
-Achievers Section        5 questions × 2 = 10
+Flutter (single codebase)
+├── Android   — offline-capable, native OMR processing
+├── iOS       — offline-capable, native OMR processing
+└── Web       — online only, static build
 
-Total: 35 questions
-Total: 40 marks
-Time: 1 hour
+        ↓ talks directly to
+
+Supabase
+├── Auth              — all three roles (§2) authenticate here
+├── PostgreSQL        — primary database
+├── Storage           — files, books, materials, OMR images
+├── Realtime          — live updates where useful (notification delivery, sync/queue status)
+└── Edge Functions    — server-side logic that shouldn't run on-device or behind pure RLS
+                         (ranking computation, cross-table validation, notification fan-out, webhooks)
+
+FCM (Firebase Cloud Messaging) — push notifications, called from Edge Functions / triggers, separate from the Supabase stack itself
+Redis (Upstash) — narrow, optional-but-included: rate limiting on Edge Functions, and caching computed leaderboards/rankings (§12) so they aren't recomputed on every read. Not used for sessions (Supabase Auth handles that) and not a general-purpose cache-everything layer.
 ```
 
-Different classes may use different paper structures and different total marks.
+- **No React. No Vite. No separate web frontend. No separate Android frontend. No separate iOS frontend.** (Supersedes the earlier pre-v1.0 draft's React+Vite web / separate Android app decision.)
+- **No custom backend server** (no FastAPI, no Django, no persistent Python/Node process). This corrects an assumption carried forward during the pre-v1.0 Flutter rebuild. Server-side logic that can't live in direct RLS-protected Supabase access runs in **Supabase Edge Functions** instead of a always-on server.
+- **OMR runs on-device**, not server-side — see §11.3. This follows directly from having no persistent server process.
+- **Flutter Web**: built via `flutter build web --release`, producing a static `build/web/` output; hosted on Vercel or Cloudflare Pages (either is acceptable — pick one and stay consistent). It's a static deployment talking directly to Supabase, same as the mobile apps — there's no separate web backend to deploy.
+- **Cost principle:** prefer free-tier-friendly, low-maintenance infrastructure over "best-in-class" if it adds cost/complexity without a concrete Phase 1 need (§28 rule 1 — don't invent infrastructure any more than features). Supabase's and Upstash's free tiers are assumed sufficient for Phase 1 institute scale; revisit if usage outgrows them.
 
 ---
 
-# 15. Question Bank
-
-Questions support:
-
-- question text
-- options
-- correct answer
-- marks
-- negative marks
-- section
-- topic
-- difficulty
-- explanation
-- image
-- diagram
-
-Question images are stored in Supabase Storage.
-
-The system must support:
-
-- text-only questions
-- image questions
-- diagram questions
-
----
-
-# 16. Question Types
-
-v1 priority:
-
-- Multiple Choice Question
-- OMR-compatible question
-
-The assessment engine should be extensible so additional question types can be added later without rewriting the scoring system.
-
----
-
-# 17. Negative Marking
-
-Each question may define:
+## 25. Core Data Model (minimum entities)
 
 ```text
-negative_marks
-```
-
-Default:
-
-```text
-0
-```
-
-Never assume all questions are worth one mark.
-
-Scoring must read the configured:
-
-- positive marks
-- negative marks
-
-from question configuration.
-
-Example:
-
-```text
-Correct    = +2
-Incorrect  = -0.5
-Unanswered = 0
-```
-
-The example is illustrative only.
-
----
-
-# 18. Syllabus and Topics
-
-Syllabus is data-driven.
-
-Syllabus must be configurable per class.
-
-Topics can be associated with questions.
-
-This enables:
-
-- topic-level analysis
-- topic mastery later
-- long-term performance tracking
-
----
-
-# 19. Assessment Format
-
-v1 examinations are paper-based.
-
-Students do not take the examination online.
-
-Supported evaluation modes:
-
-1. Manual answer entry
-2. OMR scanning
-
----
-
-# 20. Manual Answer Entry
-
-Teacher enters student answers.
-
-The system compares answers against the answer key.
-
-System calculates:
-
-- correct
-- incorrect
-- unanswered
-- section score
-- total score
-- percentage
-- rank
-
-Scoring must use each question's configured marks and negative marks.
-
----
-
-# 21. OMR Processing
-
-OMR must run through the FastAPI backend.
-
-Technology:
-
-- OpenCV
-- Python
-- FastAPI background processing
-
-Do not tightly couple OMR processing to the Android UI.
-
-The same processing pipeline should support:
-
-- Android camera capture
-- web image upload
-- future scanning tools
-
----
-
-# 22. OMR Submission States
-
-Use explicit processing states:
-
-```text
-pending
-processing
-needs_review
-failed
-confirmed
-```
-
-The UI must reflect the actual processing state.
-
-OMR failures must be recoverable.
-
-Uncertain detections must be flagged per question for human review.
-
-### Critical OMR rule
-
-The system must never silently guess an uncertain answer.
-
-OMR processing must never auto-publish results.
-
----
-
-# 23. Android OMR Workflow
-
-```text
-Open Camera
-→ Capture OMR
-→ Detect Paper
-→ Detect Answers
-→ Upload/Process
-→ Review
-→ Confirm
-```
-
-Request camera permission only when required.
-
----
-
-# 24. Student Answers
-
-Every student answer belongs to:
-
-- Student
-- Olympiad
-- Paper
-- Question
-
-The evaluation engine compares:
-
-```text
-student_answer
-vs
-correct_answer
-```
-
-Evaluation states:
-
-- Correct
-- Incorrect
-- Unanswered
-
----
-
-# 25. Section Performance
-
-For each student and assessment, calculate section performance.
-
-Example:
-
-```text
-Logical Reasoning       8/10
-Mathematical Reasoning  7/10
-```
-
-Values may be stored or reproducibly derived.
-
----
-
-# 26. Topic Performance
-
-For each topic calculate:
-
-- attempted
-- correct
-- incorrect
-- score
-- percentage
-
-Topic performance supports long-term student analysis.
-
----
-
-# 27. Results
-
-Result lifecycle:
-
-```text
-Draft
-→ Evaluated
-→ Reviewed
-→ Published
-→ Locked
-```
-
-### Result rules
-
-- OMR processing does not finalize a result.
-- Teacher/Admin must confirm the result.
-- Ordinary teachers cannot modify locked results.
-- Admin can unlock.
-- Unlocking and modifications are audited.
-
----
-
-# 28. Published Result Snapshots
-
-When a result is published, snapshot:
-
-```text
-class_at_time_of_exam
-batch_at_time_of_exam
-paper_version_id
-```
-
-These values are immutable after publication.
-
-This guarantees that:
-
-- later class changes do not alter history
-- later batch changes do not alter history
-- new paper versions do not alter old results
-
----
-
-# 29. Rankings
-
-Required ranking scopes:
-
-- Overall
-- Class-wise
-- Batch-wise
-
-## 29.1 Cross-class normalization
-
-Different papers/classes may have different total marks.
-
-Therefore cross-class ranking must use:
-
-```text
-percentage = score / total_marks × 100
-```
-
-Overall ranking is percentage-normalized.
-
-Raw-score ranking may only be used within a single compatible paper/class scope.
-
----
-
-# 30. Tie-Breaking
-
-Tie-break sequence:
-
-1. Higher Achievers Section score
-2. Higher Mathematical Reasoning score
-3. Higher Logical Reasoning score
-4. If still tied, same rank
-
-Ranking convention:
-
-```text
-1, 2, 2, 4
-```
-
-This is standard competition ranking.
-
-Ranking must be deterministic and reproducible.
-
----
-
-# 31. Student Performance
-
-The student performance view should show the history across Mini and Full Olympiads.
-
-Include:
-
-- score
-- percentage
-- overall rank
-- class rank
-- batch rank
-- section performance
-- topic performance
-- attendance
-- improvement over time
-
----
-
-# 32. Awards and Certificates
-
-Student records support:
-
-- awards
-- certificates
-- positions
-- Olympiad achievements
-- special recognition
-
-Admin can add custom achievement records.
-
-Certificate generation is a later/future enhancement unless explicitly implemented.
-
----
-
-# 33. Reports
-
-Required report types:
-
-- Student Report
-- Olympiad Report
-- Attendance Report
-- Class Report
-
-Reports must respect user permissions.
-
----
-
-# 34. Export
-
-Supported exports:
-
-- CSV
-- Excel
-- PDF
-
-Export permissions must match the user's normal access permissions.
-
----
-
-# 35. Dashboards
-
-## Admin Dashboard
-
-Display:
-
-- total students
-- total teachers
-- total batches
-- total classes
-- upcoming Olympiad
-- latest Mini Olympiad
-- average attendance
-- latest results
-- recent activity
-
-## Teacher Dashboard
-
-Display:
-
-- my batches
-- my students
-- today's attendance
-- upcoming assessments
-- recent results
-
-Never expose unrelated data.
-
----
-
-# 36. Global Search
-
-Global search must cover:
-
-- students
-- teachers
-- batches
-- classes
-- Olympiads
-- assessments
-
-Search results must always be filtered by the requesting user's permissions.
-
-A search endpoint is not an authorization mechanism.
-
----
-
-# 37. Web Application
-
-Technology:
-
-```text
-React
-Vite
-TypeScript
-```
-
-Deployment:
-
-```text
-Vercel
-```
-
-Application type:
-
-- Desktop-first
-- Responsive
-- Permission-aware navigation
-- REST API client
-
-## Main navigation
-
-```text
-Dashboard
-
-Students
-
-Attendance
-
-Olympiads
-  ├── Mini Olympiads
-  ├── Full Olympiads
-  ├── Papers
-  ├── Questions
-  ├── OMR Evaluation
-  ├── Results
-  └── Rankings
-
-Classes & Batches
-
-Teachers
-
-Syllabus & Topics
-
-Reports
-
-Awards
-
-Administration
-  ├── Users
-  ├── Custom Fields
-  ├── Settings
-  └── Audit Logs
-```
-
----
-
-# 38. Android Application
-
-Technology:
-
-```text
-Flutter
-```
-
-Targets:
-
-- Admin
-- Teacher
-
-Students have no login in v1.
-
-## Core screens
-
-- Login
-- Dashboard
-- My Batches
-- Student List
-- Attendance
-- Student Profile
-- OMR Camera
-- Manual Answer Entry
-- Result Review
-- Student Performance
-
-Administrative configuration remains primarily web-based.
-
----
-
-# 39. Android Attendance
-
-Attendance UI should be touch optimized.
-
-Required controls:
-
-- Student roster
-- Present/Absent/Late toggles
-- Mark All Present
-- Save Attendance
-
----
-
-# 40. Offline Support
-
-Android should cache at minimum:
-
-- assigned batches
-- student lists
-- relevant Olympiad data
-
-Attendance should support offline operation where practical.
-
-Flow:
-
-```text
-Record offline
-→ Store locally
-→ Connection returns
-→ Synchronize
-→ Server confirms
-```
-
-Synchronization must be idempotent.
-
-Duplicate records must not be created.
-
----
-
-# 41. Offline Conflict Policy
-
-When the same record is changed offline and online before synchronization:
-
-**Server timestamp wins.**
-
-The losing offline change must:
-
-- not be silently discarded
-- be logged in AuditLog
-- be flagged for manual review
-
----
-
-# 42. Authentication
-
-Authentication is owned entirely by FastAPI.
-
-Do not use Supabase Auth as the source of identity.
-
-There is one `User` table controlled by the backend.
-
----
-
-# 43. Web Authentication
-
-Web uses:
-
-- HTTP-only session cookie
-- Secure cookie
-- SameSite protection
-- session expiration
-- CSRF protection on state-changing endpoints
-
----
-
-# 44. Android Authentication
-
-Android uses:
-
-- short-lived JWT access token
-- refresh token
-- Android Keystore-backed encrypted storage
-
-Web and Android still use the same backend authorization layer.
-
-A user's access must be consistent across clients.
-
----
-
-# 45. Teacher Invite Flow
-
-Admin creates an account shell containing:
-
-- name
-- email
-
-Admin does not set the teacher's password.
-
-Flow:
-
-```text
-Admin creates account
-→ Time-limited email invite
-→ Teacher opens invite
-→ Teacher sets password
-→ User becomes active
-```
-
-User status begins as:
-
-```text
-invited
-```
-
-then becomes:
-
-```text
-active
-```
-
----
-
-# 46. Password Reset
-
-Password reset uses:
-
-- email reset link
-- time-limited token
-
-There is no self-registration flow.
-
----
-
-# 47. Account Deactivation
-
-When a teacher leaves:
-
-```text
-User.status = disabled
-```
-
-Do not hard-delete the user.
-
-Historical references must remain valid.
-
----
-
-# 48. API Architecture
-
-The API is versioned.
-
-Base pattern:
-
-```text
-/api/v1/
-```
-
-Core route groups:
-
-```text
-/api/v1/auth
-/api/v1/students
-/api/v1/teachers
-/api/v1/classes
-/api/v1/batches
-/api/v1/attendance
-/api/v1/olympiads
-/api/v1/papers
-/api/v1/sections
-/api/v1/questions
-/api/v1/answers
-/api/v1/omr
-/api/v1/results
-/api/v1/rankings
-/api/v1/reports
-/api/v1/awards
-```
-
-The API must be independent of any frontend client.
-
----
-
-# 49. Core Data Model
-
-Minimum entities:
-
-```text
-User
-Teacher
-Student
-Guardian
-
-Class
-Batch
-TeacherBatch
-StudentBatch
+Institute
+
+User            (all three roles authenticate through this — maps to Supabase `auth.users`; app-specific fields live in a linked `public.profiles`-style row, not duplicated into `auth.users`)
+Admin            (profile fields for role=admin)
+Facilitator      (profile fields for role=facilitator)
+Student          (profile fields for role=student)
 
 AcademicYear
+Batch
+Class
+Subject
+FacilitatorAssignment   (facilitator × batch/class/subject)
+StudentEnrollment       (student × batch/class, historical)
+
 Session
 Attendance
 
-Olympiad
-OlympiadPaper
+Exam
+Olympiad                (type: monthly | yearly)
+Paper
 Section
 Question
 QuestionOption
@@ -1209,817 +403,142 @@ AnswerKey
 StudentAnswer
 OMRSubmission
 AssessmentResult
-Ranking
+Ranking                 (scope: batch | class; competition: exam-linked | monthly-olympiad | yearly-olympiad)
 
-Topic
-Syllabus
+LearningMaterial
+Book
+BookAccess              (student ↔ book, if access needs to be tracked individually)
 
-Award
-Certificate
-
-CustomField
-CustomFieldValue
+Notification
 
 AuditLog
+
+CustomField / CustomFieldValue   (carried forward from the earlier pre-v1.0 draft if per-institute custom fields are still wanted — confirm before building)
 ```
+
+Every entity carries `institution_id` (NOT NULL FK to `Institute`) — see §3 and §37.
 
 ---
 
-# 50. Public IDs
+## 26. Public IDs
 
-`Student.public_id` and `Teacher.public_id` must be different from the internal database primary key.
-
-Never expose sequential internal IDs externally.
-
-Reason:
-
-- prevents identifier enumeration
-- improves security
-- separates public identity from database implementation
-
-Public IDs are generated when records are created.
+`Student`, `Facilitator`, and `Admin` each need an identifier safe to print/display/scan (the QR code in §7.1 encodes the student's). Carried forward from the earlier pre-v1.0 draft's fix: non-sequential, generated as `{PREFIX}-{6-character random code}` (e.g. `STU-7F3K9Q`), never a zero-padded counter — sequential-looking IDs defeat the purpose (enumeration resistance).
 
 ---
 
-# 51. Core Data Rules
+## 27. General Rules (carried forward, still apply)
 
-The system must enforce:
+These engineering practices, carried forward from the earlier pre-v1.0 draft, aren't contradicted by the new feature list, so they carry forward as-is:
 
-- unique student IDs
-- unique user accounts
-- server-side permission checks
-- historical enrollment records
-- historical batch assignments
-- no duplicate attendance
-- questions belong to sections
-- sections belong to papers
-- papers belong to Olympiads
-- student answers belong to an Olympiad/paper
-- results are calculated from stored answers
-- configured marks determine scoring
-- configured negative marks determine penalties
-- cross-class rankings are percentage-normalized
-- published results cannot silently change
-- published papers/answer keys cannot be mutated
-- historical results remain available indefinitely
+1. **UUIDs as primary keys** everywhere; public IDs (§26) are a separate, non-sequential display identifier.
+2. **Soft-delete, not hard-delete**, on core entities (`deleted_at` or status enums).
+3. **Historical preservation**: enrollment, results, and audit logs are append-only or immutable once finalized; transfers/changes create new records rather than overwriting.
+4. **Timestamps on every table** (`created_at`, `updated_at`), without exception, including junction tables — append-only tables (`AuditLog`, `Ranking`) may omit `updated_at` since rows are never mutated in place.
+5. **Referential integrity at the DB level** — real foreign keys, not untyped string references.
+6. **Versioning for immutable content** — Papers/AnswerKeys carry `version` and lock once results are published against them.
+7. **Decimal-safe scoring** — marks/negative marks/totals are never integers (§11.1).
 
 ---
 
-# 52. Security Requirements
+## 28. Development Rules
 
-Required controls:
-
-- Secure password hashing
-- HTTP-only session cookies for web
-- JWT access/refresh tokens for Android
-- Android Keystore-backed token storage
-- Session expiration
-- CSRF protection on state-changing endpoints
-- Rate limiting
-- Input validation
-- Server-side authorization
-- Role-based access control
-- Audit logging
-- Secure file uploads
-- OMR file validation
-- File size limits
-- Path traversal protection
-- HTTPS in production
-- Public IDs instead of internal sequential IDs
-
-Every protected endpoint must validate:
-
-1. Who is the user?
-2. What role do they have?
-3. What resource are they accessing?
-4. Are they allowed to read or modify it?
+1. Do not invent requirements beyond this document and its derived docs. If a feature isn't listed, don't build it "for completeness" — flag it as a question instead.
+2. Do not remove or narrow a feature that's explicitly listed without asking first.
+3. Sections, subjects, class lists, and similar are configurable/admin-defined, not hard-coded (§4, §10).
+4. Don't replace working code/specs unnecessarily — extend, don't rewrite from scratch, unless the change genuinely requires it.
+5. When this document is ambiguous, pick the most reasonable interpretation, state the assumption in the derived doc, and proceed — don't block on it.
+6. Prefer stable, cross-platform, low-maintenance, free-tier-friendly packages and infrastructure (§24) — avoid introducing a paid or complex dependency for something a simpler option already covers.
 
 ---
 
-# 53. Audit Log
-
-Audit important changes including:
-
-- student changes
-- teacher assignments
-- batch assignments
-- attendance changes
-- question changes
-- answer-key changes
-- answer-key version creation
-- OMR uploads
-- OMR corrections
-- result changes
-- result publication
-- result unlocking
-- ranking changes
-- user changes
-- invite sent
-- account activated
-- account disabled
-- permission-relevant changes
-
-Audit record structure:
+## 29. Environment Configuration
 
 ```text
-User
-Action
-Entity
-Entity ID
-Timestamp
-Previous Value
-New Value
-```
-
-Audit logs cannot be edited by ordinary users.
-
-For binary files, log the storage reference rather than raw bytes.
-
----
-
-# 54. File Storage
-
-Production file storage uses:
-
-```text
-Supabase Storage
-```
-
-Required file categories:
-
-- student photos
-- OMR scans
-- certificates
-- question images
-
-Do not rely on local filesystem persistence in production.
-
-Store file metadata/object references in Postgres.
-
----
-
-# 55. Infrastructure
-
-## Frontend
-
-```text
-React + Vite
-Vercel
-```
-
-## Backend
-
-```text
-FastAPI + Python
-```
-
-Persistent host:
-
-- Railway
-- Fly.io
-- Render
-
-Do not deploy the FastAPI backend as a Vercel serverless function.
-
-Reason:
-
-- OMR processing may require longer execution
-- background processing is needed
-- persistent process behavior is preferred
-
-## Database
-
-```text
-Supabase PostgreSQL
-```
-
-Always use Supabase connection pooling through Supavisor.
-
-## Storage
-
-```text
-Supabase Storage
-```
-
-## OMR
-
-```text
-OpenCV
-inside FastAPI
-```
-
----
-
-# 56. Environment Configuration
-
-Use environment variables.
-
-Example:
-
-```text
-NODE_ENV
-VITE_API_BASE_URL
-PUBLIC_BASE_URL
-DATABASE_URL
+# Flutter client (safe to ship in-app — Supabase anon key is public by design)
 SUPABASE_URL
+SUPABASE_ANON_KEY
+
+# Supabase Edge Functions / server-side only — never shipped to the client
 SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_JWT_SECRET
+
+# Storage
 SUPABASE_STORAGE_BUCKET
-JWT_SECRET
-SESSION_SECRET
-SMTP_*
+
+# Push (FCM)
+FCM_SERVER_KEY / FCM_PROJECT_ID          # Edge Function side, for triggering pushes
+GOOGLE_SERVICES_JSON / GoogleService-Info.plist   # per-platform FCM client config, not an env var — ships in the app bundle
+
+# Redis (Upstash) — rate limiting + ranking cache only, see §24
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+
+# Web hosting (Vercel / Cloudflare Pages) — platform-specific, set in the hosting dashboard, not app code
+DEFAULT_INSTITUTION_ID       # only meaningful in a single-institute dev/staging seed; production has many
 ```
 
-Rules:
-
-- Never commit secrets.
-- Use separate development and production credentials/projects.
-- Do not hard-code hostnames, IP addresses, ports, or filesystem paths.
-- Frontend must never receive backend-only secrets.
-- Hosting providers should be replaceable through configuration.
+Rules: never commit secrets (the `SUPABASE_SERVICE_ROLE_KEY` in particular must never ship in the Flutter client — only the `anon` key does, with RLS enforcing access); separate dev/prod Supabase projects; no hard-coded hosts/paths; hosting providers should be swappable through configuration.
 
 ---
 
-# 57. Codebase Architecture
+## 30. Development Priority (informational — sequencing, not scope)
 
-Use a monorepo.
+Carried forward as guidance on build order, not a spec of what's in/out of Phase 1 (that's §1–§23). Don't start Phase 2 work (§39) while this list still has unfinished items:
 
-Business logic must be separated from framework code.
-
-Preferred concept:
-
-```text
-core/
-  database access
-  validation
-  scoring
-  ranking
-  domain rules
-
-backend/
-  FastAPI routes
-  authentication
-  HTTP adapters
-  background tasks
-
-web/
-  React/Vite client
-
-android/
-  Flutter client
-```
-
-Important:
-
-Do not place critical business logic only in API route handlers.
-
-The core layer should be reusable by future clients/services.
+1. Flutter project architecture (single codebase, §24)
+2. Authentication (Supabase Auth, all 3 roles, §2)
+3. Supabase integration (Postgres schema, Storage, RLS policies)
+4. Institution/class/batch/subject/student/facilitator management (§3–§6)
+5. Attendance (§7)
+6. QR scanning (§7.1)
+7. OMR sheet generation (§11.3)
+8. OMR camera scanning (§11.3)
+9. OpenCV processing, on-device (§11.3)
+10. Automatic evaluation + Facilitator confirm step (§11.3)
+11. Offline synchronization (§22–23)
+12. Notifications (§13, FCM)
+13. Flutter Web deployment (§24)
 
 ---
 
-# 58. Reusable React Components
+## 39. Roadmap — Phases 2–5 (not built now; do not start until each phase's version bump, §0)
 
-Required reusable components include:
+Nothing below is Phase 1 scope. Don't build any of it "while we're in there" on a Phase 1 task — each phase starts only when its version bump (§0) actually happens.
 
-```text
-AppLayout
-Sidebar
-Header
+### Phase 2 — Monetization & Parent Engagement → v2.0
+The commercial reason an institute buys a platform like this; without it JMOX is an internal tool, not a sellable product.
+- Fee management: fee structures per class/batch, collection, payment gateway (Razorpay/Stripe), receipts/invoices, due-date reminders
+- Parent accounts (view-only): child's attendance, results, fees, notifications — the natural next role after Admin/Facilitator/Student (§2)
+- SMS notifications alongside push (§13) — more reliable than app push for many parents, especially for fee/attendance alerts
+- Certificate generation: auto-generated PDFs for Olympiad rank holders and top performers
+- Basic timetable/scheduling: class and exam timetables, calendar view
 
-DataTable
-SearchBar
-FilterBar
+### Phase 3 — Academic Depth → v3.0
+Makes the platform stickier for day-to-day teaching, not just admin/reporting.
+- Homework/assignments — lighter-weight than formal exams (§8), distinct assign/submit/track flow
+- Question bank + auto paper generation — reuse questions across exams/Olympiads instead of authoring from scratch each time
+- AI-assisted short-answer grading — flagged as deferred in §11.2; build it here, keeping the mandatory human-review gate
+- Discussion/doubt forum — student ↔ facilitator, scoped like everything else (§2)
+- Recorded lecture library — video content, reusing the Learning Materials access model (§14)
 
-StudentProfile
-StudentForm
-StudentCard
+### Phase 4 — Platform Maturity & Scale → v4.0
+Needed once JMOX runs multiple institutes for real, not just one.
+- Cross-institute super-admin role (flagged as a gap in §3)
+- Institute-level billing/subscription, if JMOX itself is sold as SaaS per institute
+- Overall/cross-institute rankings (§12) — inter-institute Olympiad competitions
+- Custom roles/permissions beyond the fixed Admin/Facilitator/Student set (e.g. Accountant, Front-desk, Exam Coordinator)
+- Multi-language support (i18n)
+- RFID/biometric attendance hardware (§7.1)
 
-BatchSelector
-
-AttendanceTable
-AttendanceCalendar
-
-OlympiadCard
-PaperBuilder
-SectionBuilder
-
-QuestionEditor
-QuestionImageUploader
-AnswerKeyEditor
-
-OMRUploader
-OMRReview
-AnswerEntry
-
-ResultTable
-RankingTable
-PerformanceChart
-
-ReportViewer
-ExportDialog
-
-ConfirmDialog
-AuditLogTable
-
-LoadingState
-EmptyState
-ErrorState
-Toast
-```
+### Phase 5 — Expansion → v5.0 (longer-term, speculative — revisit scope before starting)
+- Paid books/marketplace (§15)
+- Alumni tracking
+- Physical library inventory management
+- Transport tracking
+- Full staff HR (payroll, leave)
 
 ---
 
-# 59. UI/UX Principles
+## 40. Golden Rule
 
-The application must be:
-
-- clean
-- professional
-- fast
-- practical
-- accessible
-- responsive
-- teacher-friendly
-
-Avoid:
-
-- excessive animation
-- marketing-style hero sections
-- excessive gradients
-- excessive cards
-- meaningless charts
-- complicated navigation
-
-Teacher workflows should require minimal interaction.
-
----
-
-# 60. Primary Workflows
-
-## Teacher Attendance
-
-```text
-Login
-→ My Batches
-→ Select Batch
-→ Select Session
-→ Mark Attendance
-→ Save
-```
-
-## Teacher Olympiad
-
-```text
-Login
-→ My Olympiads
-→ Select Olympiad
-→ Select Student
-→ Upload OMR OR Enter Answers
-→ Evaluate
-→ Review
-→ Confirm
-```
-
-## Admin
-
-```text
-Login
-→ Create Academic Year
-→ Create Classes
-→ Create Batches
-→ Create Teachers
-→ Send Invites
-→ Assign Teachers
-→ Register Students
-→ Assign Students
-→ Create Olympiad
-→ Create Paper
-→ Configure Sections
-→ Add Questions
-→ Set Answer Key
-→ Conduct Exam
-→ Evaluate OMR
-→ Review Results
-→ Publish Rankings
-```
-
----
-
-# 61. Development Rules
-
-Before modifying the project:
-
-1. Read this file.
-2. Inspect the existing implementation.
-3. Understand current architecture.
-4. Do not replace working code unnecessarily.
-5. Do not invent requirements.
-6. Keep business logic framework-independent where possible.
-7. Validate all data server-side.
-8. Reuse components.
-9. Preserve historical records.
-10. Keep API platform-independent.
-11. Separate production and development configuration.
-12. Never commit secrets.
-13. Do not substitute mock data for required functionality.
-14. Do not create fake buttons.
-15. Mark incomplete features clearly.
-
----
-
-# 62. Development Priority
-
-## Phase 0 — Infrastructure
-
-- Choose persistent FastAPI host
-- Set up Supabase
-- Set up pooled Postgres
-- Set up Storage
-- Verify pooled DB under concurrent load
-- Create monorepo
-- Create reusable core package
-
-## Phase 1 — Foundation
-
-- database
-- authentication
-- invite flow
-- cookie + JWT
-- users
-- roles
-- API
-- classes
-- batches
-
-## Phase 2 — Students
-
-- registration
-- profiles
-- guardians
-- custom fields
-- enrollment history
-- batch assignment
-
-## Phase 3 — Attendance
-
-- sessions
-- automatic session generation
-- attendance
-- history
-- teacher workflow
-- reports
-
-## Phase 4 — Olympiad
-
-- Olympiad management
-- versioned papers
-- sections
-- topics
-- questions
-- negative marking
-- answer keys
-
-## Phase 5 — Evaluation
-
-- manual answer entry
-- automatic scoring
-- negative marking
-- OMR upload
-- OMR recognition
-- OMR review
-- result confirmation
-- result snapshots
-- publish/lock
-
-## Phase 6 — Ranking
-
-- overall ranking
-- class ranking
-- batch ranking
-- percentage normalization
-- tie-breaking
-- ranking publication
-
-## Phase 7 — Performance
-
-- performance dashboards
-- topic analysis
-- section analysis
-- historical trends
-- awards
-- certificates
-
-## Phase 8 — Reports
-
-- student reports
-- attendance reports
-- Olympiad reports
-- class reports
-- CSV
-- Excel
-- PDF
-
-## Phase 9 — Android
-
-- authentication
-- dashboard
-- teacher batches
-- students
-- attendance
-- manual answers
-- OMR camera
-- results
-
-## Phase 10 — Production Hardening
-
-- monitoring
-- backups
-- custom domains
-- HTTPS
-- production reliability
-
----
-
-# 63. Android Technology Decision
-
-Flutter is the confirmed Android technology.
-
-Reason:
-
-- backend is API-first
-- business logic is shared through the backend/core layer
-- Flutter leaves a path to iOS without replacing backend architecture
-
-Do not switch to React Native without revising the project decision.
-
----
-
-# 64. Future Features
-
-These are explicitly future features and should not be implemented unless requested:
-
-- Student accounts
-- Parent accounts
-- Online examinations
-- iOS application
-- Desktop application
-- Better OMR recognition
-- Automated certificate generation
-- Advanced analytics
-- Topic mastery
-- SMS notifications
-- Email notifications
-- Additional competition types
-- Additional classes
-- Multiple institutions
-
-### Multi-tenancy readiness
-
-Add a nullable:
-
-```text
-institution_id
-```
-
-to core tables now if the implementation follows the multi-institution-ready design.
-
-Default it to the current single institution.
-
----
-
-# 65. v1 Non-Goals
-
-Do not build these in v1:
-
-- Student login
-- Parent portal
-- Online student examination
-- Online payments
-- Chat
-- Social feed
-- Video classes
-- School fee management
-- Payroll
-- Full school ERP
-
----
-
-# 66. Definition of Done
-
-JMOX v1 is considered complete when the production system supports:
-
-- Admin workflows
-- Teacher workflows
-- Student CRUD
-- Class/batch management
-- Attendance
-- Olympiad management
-- Paper configuration
-- Paper versioning
-- Sections
-- Questions
-- Answer keys
-- Manual evaluation
-- OMR evaluation
-- OMR review
-- Scoring
-- Negative marking
-- Ranking
-- Tie-breaking
-- Result review
-- Result publication
-- Result locking
-- Historical student records
-- Performance analysis
-- Reports
-- Export
-- Server-side permissions
-- Audit logs
-- Persistent storage
-- React web client
-- Flutter Android client
-- Both clients using the same production API
-
----
-
-# 67. Final System Model
-
-```text
-Students
-   │
-   ├── Classes
-   │      └── Batches
-   │             └── Teachers
-   │                    └── Attendance
-   │
-   └── Olympiad
-          │
-          └── Paper
-                │
-                ├── Sections
-                │      └── Topics
-                │
-                ├── Questions
-                │      └── Answer Key
-                │
-                └── Student Answers
-                        │
-                        ├── Manual Evaluation
-                        │
-                        └── OMR Processing
-                               │
-                               └── Review
-                                      │
-                                      └── Confirm
-                                             │
-                                             └── Results
-                                                    │
-                                                    ├── Section Analysis
-                                                    ├── Topic Analysis
-                                                    ├── Ranking
-                                                    └── Student History
-                                                           │
-                                                           ├── Performance
-                                                           ├── Awards
-                                                           ├── Certificates
-                                                           └── Reports
-```
-
----
-
-# 68. Confirmed v1 Summary
-
-```text
-Users:
-  Admin, Teachers
-
-Account provisioning:
-  Admin only
-
-JMO:
-  Junior Mathematics Olympiad
-
-Initial classes:
-  Class 1, Class 2, Class 3
-
-Schedule:
-  2 classes/week
-  2 hours/class
-
-Attendance:
-  Teacher-recorded
-  Per assigned batch
-
-Assessments:
-  Monthly Mini Olympiad
-  Annual Full Olympiad
-
-Exam format:
-  Paper-based
-  OMR-compatible
-
-Evaluation:
-  Manual answer entry
-  OMR scanning
-  Human review required
-
-Questions:
-  MCQ/OMR-compatible
-  Text + images
-  Negative marking supported
-
-Papers:
-  Class-specific
-  Configurable
-  Versioned
-
-Rankings:
-  Overall by normalized percentage
-  Class-wise
-  Batch-wise
-
-Tie-breaking:
-  Achievers
-  Mathematical Reasoning
-  Logical Reasoning
-  Same rank if still tied
-  Competition ranking: 1-2-2-4
-
-Students:
-  Full profile
-  Guardians
-  Attendance
-  Assessments
-  Rankings
-  Academic history
-  Awards/certificates
-  Custom fields
-
-Web:
-  React + Vite
-  Vercel
-
-Backend:
-  FastAPI
-  Persistent hosting
-
-Android:
-  Flutter
-
-Database:
-  Supabase Postgres
-  Supavisor pooling
-
-Storage:
-  Supabase Storage
-
-OMR:
-  OpenCV
-  In-process FastAPI background processing
-
-Architecture:
-  API-first
-  Multi-client
-  Versioned REST API
-  Platform-independent business logic
-
-Student login:
-  Not in v1
-
-Parent portal:
-  Not in v1
-```
-
----
-
-# 69. Golden Rule for AI Coding Agents
-
-Treat this document as the project's authoritative product context.
-
-When requirements conflict with implementation convenience:
-
-**follow this document.**
-
-When the existing code conflicts with this document:
-
-1. Inspect the existing implementation.
-2. Preserve working behavior where possible.
-3. Identify the exact conflict.
-4. Change the smallest necessary surface.
-5. Preserve data and historical records.
-6. Do not silently invent a new product requirement.
-
-The backend/API/database are the authoritative system of record.
-
-React and Flutter are clients.
-
-Do not put business rules exclusively in a frontend.
-
-Do not let UI behavior define authorization.
-
-Do not let paper/class changes rewrite historical results.
-
-Do not let OMR automatically publish unreviewed results.
-
-Do not lose historical data.
-
-Do not expose internal sequential database IDs.
+If any derived document (requirements, database design, architecture/API, UI/UX, security/testing/deployment) conflicts with this file, **this file wins**. Flag the conflict in `audit-notes.md` rather than silently picking one side. Don't invent requirements; don't quietly drop ones that are here.

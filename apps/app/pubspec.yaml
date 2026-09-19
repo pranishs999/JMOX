@@ -1,0 +1,30 @@
+name: jmox_app
+description: "Junior Mathematics Olympiad (JMO) Management System — Unified Cross-Platform Application (Web, Android, iOS)"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  supabase_flutter: ^2.5.0
+  go_router: ^14.0.0
+  provider: ^6.1.1
+  intl: ^0.19.0
+  flutter_secure_storage: ^9.0.0
+  sqflite: ^2.3.0
+  path_provider: ^2.1.1
+  camera: ^0.10.5+5
+  image_picker: ^1.0.4
+  shared_preferences: ^2.2.2
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

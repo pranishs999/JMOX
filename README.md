@@ -1,118 +1,253 @@
-# JMO Management System
+# JMO Management System (JMOX)
 
-Junior Mathematics Olympiad (JMO) Management System — a web and mobile application for managing students, teachers, classes, batches, attendance, olympiad assessments, OMR-based and manual evaluation, results, rankings, awards, and reporting.
+> Junior Mathematics Olympiad Management System — a full-stack platform for managing students, teachers, classes, batches, attendance, olympiad assessments, OMR-based and manual evaluation, automated scoring, rankings, awards, and reporting.
+
+---
 
 ## Architecture
 
-- **Web Frontend**: React + Vite SPA (deployed on Vercel)
-- **Mobile Frontend**: Flutter Android app
-- **Backend**: FastAPI (Python) on Railway/Fly.io/Render
-- **Database**: PostgreSQL via Supabase (with Supavisor connection pooling)
-- **Object Storage**: Supabase Storage (S3-compatible)
-- **Cache/Queue**: Upstash Redis (rate limiting, sessions, job queue)
-- **Email**: Resend / SendGrid
+```
+┌──────────────────┐     HTTPS     ┌──────────────────────┐
+│   React + Vite   │ ◄───────────► │   FastAPI (Python)    │
+│   Web SPA        │               │   REST API Server     │
+└──────────────────┘               ├──────────────────────┤
+                                   │  OMR Worker (async)   │
+┌──────────────────┐     HTTPS     │  OpenCV processing    │
+│  Flutter Android │ ◄───────────► └──────────┬───────────┘
+│  Mobile App      │                          │
+└──────────────────┘               ┌──────────┼───────────┐
+                                   │          ▼           │
+                                ┌──┴────┐  ┌──────┐  ┌───┴──┐
+                                │Postgres│  │Redis │  │Store │
+                                └───────┘  └──────┘  └──────┘
+```
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| Web Frontend | React + Vite (TypeScript) | Admin/teacher SPA — dashboards, student/teacher management, attendance, results, rankings |
+| Mobile App | Flutter (Android) | Teacher app — attendance, answer entry, OMR camera capture |
+| Backend API | FastAPI (Python 3.14) | REST API, business logic, auth, background jobs |
+| Database | PostgreSQL (asyncpg + SQLAlchemy) | Primary data store with Alembic migrations |
+| Cache/Sessions | Redis | Rate limiting, session store, job queue |
+| Object Storage | Supabase Storage (S3-compatible) | OMR scans, student photos, exports |
+| Email | Resend / SendGrid / SMTP | Account invitations, password resets |
+
+> **Vision document:** [`docs/context.md`](docs/context.md) describes the long-term product vision. Architecture divergences from that vision are tracked in [`docs/audit-notes.md`](docs/audit-notes.md).
+
+---
 
 ## Monorepo Structure
 
 ```
-jmox/
+JMOX/
 ├── apps/
-│   ├── web/                    # React + Vite SPA
-│   └── android/                # Flutter Android app
-├── server/                     # FastAPI backend
+│   ├── web/                        # React + Vite SPA
+│   └── android/                    # Flutter Android app
+├── server/                         # FastAPI backend
 │   ├── app/
-│   │   ├── api/v1/             # API routes
-│   │   ├── core/               # Framework-independent business logic
-│   │   ├── models/             # SQLAlchemy ORM models
-│   │   ├── schemas/            # Pydantic request/response schemas
-│   │   ├── services/           # Application services
-│   │   ├── auth/               # Authentication (cookie + JWT)
-│   │   ├── workers/            # Background job definitions
-│   │   └── db/                 # Database session + migrations
-│   └── tests/                  # Unit and integration tests
-├── docs/                       # Documentation (source of truth)
-├── docker-compose.yml          # Local development services
-├── .env.example                # Environment variable template
+│   │   ├── api/v1/routes/          # REST endpoints (17 route modules)
+│   │   ├── auth/                   # Authentication (Argon2id + cookies/JWT)
+│   │   ├── core/                   # Business logic (scoring, ranking, permissions)
+│   │   ├── models/                 # SQLAlchemy ORM models (10 model modules)
+│   │   ├── schemas/                # Pydantic request/response schemas
+│   │   ├── services/               # Application services (CRUD, public ID generation)
+│   │   ├── workers/                # Background jobs (OMR processor)
+│   │   ├── db/                     # Database session, Alembic migrations
+│   │   └── utils/                  # Shared utilities
+│   ├── tests/                      # pytest (unit + integration)
+│   ├── flush_and_seed.py           # Database seed script (Super Admin)
+│   └── requirements.txt            # Python dependencies
+├── docs/                           # Project documentation (source of truth)
+├── docker-compose.yml              # Local PostgreSQL + Redis
+├── run.sh                          # One-click development startup
+├── .env.example                    # Environment variable template
+├── TODO_STATUS.md                  # Implementation status tracker
 └── README.md
 ```
 
-## Quick Start (Development)
+---
+
+## Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Node.js 18+ (for web)
-- Python 3.11+ (for backend)
-- Flutter 3.16+ (for Android)
+- Docker & Docker Compose
+- Python 3.11+
+- Node.js 18+ (for web frontend)
+- Flutter 3.16+ (for Android app)
 
-### 1. Start Local Infrastructure
+### One-Command Startup
 
 ```bash
-docker-compose up -d
+./run.sh
 ```
 
-This starts:
-- PostgreSQL (port 5432)
-- Redis (port 6379)
+This script:
+1. Checks prerequisites (Docker, Python, Node.js)
+2. Starts PostgreSQL (port 5432) and Redis (port 6379) via Docker Compose
+3. Creates/activates the Python virtual environment
+4. Installs backend dependencies
+5. Runs database migrations (`alembic upgrade head`)
+6. Seeds the Super Admin account
+7. Starts the FastAPI server with hot-reload
 
-### 2. Backend Setup
+### Manual Setup
 
+**1. Start infrastructure:**
+```bash
+docker-compose up -d    # PostgreSQL + Redis
+```
+
+**2. Backend:**
 ```bash
 cd server
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp ../.env.example .env  # Edit with local values
+cp ../.env.example .env     # Edit with local values
 alembic upgrade head
+python flush_and_seed.py    # Create Super Admin
 uvicorn app.main:app --reload
 ```
 
-Backend runs at `http://localhost:8000`
-API docs at `http://localhost:8000/docs`
+- API server: `http://localhost:8000`
+- Interactive docs: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
-### 3. Web Frontend Setup
-
+**3. Web frontend:**
 ```bash
 cd apps/web
 npm install
-cp ../.env.example .env.local  # Edit VITE_API_URL
 npm run dev
 ```
 
-Web app runs at `http://localhost:5173`
+- Web app: `http://localhost:5173`
 
-### 4. Android App Setup
-
+**4. Android app:**
 ```bash
 cd apps/android
 flutter pub get
 flutter run
 ```
 
-## Documentation
+### Default Super Admin
 
-All requirements, architecture, database design, UI/UX, and security specifications are in the [`docs/`](./docs) directory:
+| Field | Value |
+|-------|-------|
+| Email | `jms.hric@gmail.com` |
+| Password | `Mathforall@JMO369` |
 
-- [`requirements.md`](./docs/requirements.md) — Product requirements and functional specs
-- [`architecture-api.md`](./docs/architecture-api.md) — System architecture and API specification
-- [`database-design.md`](./docs/database-design.md) — Complete database schema
-- [`ui-ux-design.md`](./docs/ui-ux-design.md) — UI/UX design for web and Android
-- [`security-testing-deployment.md`](./docs/security-testing-deployment.md) — Security, testing, and deployment guide
-- [`context.md`](./docs/context.md) — Context audit with critical fixes and decisions
+---
 
 ## Key Features
 
-- Student & teacher management with Admin-only account creation
-- Class/batch/academic year management with enrollment history
-- Offline-capable attendance with deterministic conflict resolution
-- Olympiad paper creation with sections, questions, answer keys, and versioning
-- Manual and OMR-based evaluation (async worker)
+### People Management
+- Admin-only account creation (no self-registration)
+- Student and teacher records with auto-generated public IDs (`JMO-YYYY-XXXX`)
+- Login password generation for teachers and students on creation
+- Guardian management linked to students
+- Multi-identifier login (email, user public ID, teacher/student public ID)
+
+### Academic Structure
+- Academic years with active-year management
+- Classes within academic years
+- Batches within classes with schedule configuration
+- Teacher-to-batch assignments with historical tracking
+- Student enrollment with transfer and withdrawal support
+
+### Attendance
+- Batch-level session management (scheduled, completed, cancelled)
+- Per-student attendance (present, absent, late, excused)
+- Bulk "Mark All Present" with individual overrides
+- Offline sync with server-wins conflict resolution
+- Attendance rate statistics and reports
+
+### Olympiad Assessment
+- Olympiad lifecycle: Draft → Scheduled → In Progress → Completed
+- Class-specific papers with sections and questions
+- Multiple-choice questions (A/B/C/D) with per-question marks and negative marking
+- Versioned answer keys with lock-on-publish
+- Manual answer entry and OMR-based evaluation
+- Human review required for OMR results (no auto-publishing)
+
+### Scoring & Rankings
 - Automated scoring with negative marking support
-- Rankings with standard competition ranking (1-2-2-4) and percentage-based cross-class ranking
-- Published results are immutable with historical snapshots
-- Audit logging for all state changes
-- Reports and exports (PDF, Excel)
-- Awards and certificate generation
+- Standard competition ranking (1-2-2-4 skip convention)
+- Cross-class ranking by percentage (not raw score)
+- Section-based tie-breaking (ordered by section priority)
+- Published results are immutable — `class_at_time_of_exam` preserved in snapshots
+
+### Reporting & Awards
+- PDF and Excel report generation
+- Batch attendance reports, student progress reports, olympiad result summaries
+- Award criteria management (rank-based, percentage-based)
+- Certificate generation
+
+### Security & Audit
+- Argon2id password hashing
+- Dual auth: HTTP-only cookies (web) + JWT Bearer tokens (mobile)
+- CSRF protection for web state-changing requests
+- Redis-backed rate limiting on auth endpoints
+- Comprehensive audit logging (append-only, before/after snapshots)
+- Role-based access control: Admin (full), Teacher (assigned batches only)
+
+---
+
+## API Overview
+
+All endpoints are under `/api/v1/`. Full specification in [`docs/architecture-api.md`](docs/architecture-api.md).
+
+| Module | Prefix | Key Endpoints |
+|--------|--------|--------------|
+| Auth | `/auth` | login, logout, refresh, me, forgot-password, reset-password, activate |
+| Students | `/students` | CRUD, transfer, withdraw, login-password generation |
+| Teachers | `/teachers` | CRUD, deactivate, reactivate, resend-invite, login-password generation |
+| Academic | `/academic-years`, `/classes`, `/batches` | CRUD with relationships |
+| Attendance | `/attendance` | Batch marking, offline sync |
+| Olympiads | `/olympiads` | CRUD with lifecycle management |
+| Papers | `/papers`, `/sections`, `/questions` | Paper structure management |
+| Answers | `/answers` | Manual answer entry |
+| Results | `/results` | Calculate, publish, unpublish |
+| Rankings | `/rankings` | Per-class, cross-class |
+| OMR | `/omr` | Upload, review, confirm |
+| Awards | `/awards` | Award criteria and assignment |
+| Reports | `/reports` | PDF/Excel generation |
+| Audit Logs | `/audit-logs` | Query audit trail |
+| Custom Fields | `/custom-fields` | Dynamic field management |
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [context.md](docs/context.md) | Long-term product vision and feature specifications |
+| [requirements.md](docs/requirements.md) | Functional and non-functional requirements |
+| [database-design.md](docs/database-design.md) | Complete database schema and entity relationships |
+| [architecture-api.md](docs/architecture-api.md) | System architecture and REST API specification |
+| [ui-ux-design.md](docs/ui-ux-design.md) | UI/UX design for web and Android |
+| [security-testing-deployment.md](docs/security-testing-deployment.md) | Security, testing strategy, and deployment guide |
+| [audit-notes.md](docs/audit-notes.md) | Architecture decisions and divergences from context.md |
+
+---
+
+## Testing
+
+```bash
+cd server
+source .venv/bin/activate
+
+# Run all tests
+pytest
+
+# Unit tests only (scoring, ranking, permissions, attendance)
+pytest tests/unit/
+
+# Integration tests (API endpoints, auth, database)
+pytest tests/integration/
+```
+
+---
 
 ## License
 
