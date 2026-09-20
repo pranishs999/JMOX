@@ -70,9 +70,40 @@ server/app/db/migrations/versions/*.pyc
 # Temporary files
 *.tmp
 *.swp
+# Flutter & Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+apps/android/.gradle/
+apps/android/local.properties
+apps/android/app/build/
+
+# iOS / macOS
+apps/ios/Pods/
+apps/ios/.symlinks/
+apps/ios/Flutter/Flutter.framework
+apps/ios/Flutter/Flutter.podspec
+apps/macos/Pods/
+apps/macos/.symlinks/
+apps/macos/Flutter/ephemeral/
+
 # Secrets
 *.pem
 *.key
+.env
+.env*.local
+!.env.example
+
 # Misc
+*.tmp
+*.swp
 *.sublime-workspace
 *.sublime-project
