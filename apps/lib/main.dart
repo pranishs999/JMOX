@@ -8,14 +8,26 @@ import 'router/app_router.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase Client with fallback local credentials
+  // Initialize Supabase Client with environment configuration
   try {
-    await Supabase.initialize(
-      url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://demo-jmox.supabase.co'),
-      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'demo-anon-key-jmox-2026'),
+    const supabaseUrl = String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: 'https://amqawozipvfjgrojpvar.supabase.co',
     );
+    const supabaseAnonKey = String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue: '',
+    );
+    if (supabaseAnonKey.isNotEmpty) {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      );
+    } else {
+      debugPrint('Supabase notice: SUPABASE_ANON_KEY not set. Running in local mock fallback mode.');
+    }
   } catch (e) {
-    debugPrint('Supabase init notice: Running with local mock fallback mode.');
+    debugPrint('Supabase init notice: Running with local mock fallback mode ($e).');
   }
 
   runApp(

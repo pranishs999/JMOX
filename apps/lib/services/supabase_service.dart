@@ -8,12 +8,28 @@ class SupabaseService {
   factory SupabaseService() => _instance;
   SupabaseService._internal();
 
-  SupabaseClient get client => Supabase.instance.client;
+  SupabaseClient? get client {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  static const String supabaseUrl = 'https://demo-jmox.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-key';
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://amqawozipvfjgrojpvar.supabase.co',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
 
   static Future<void> initialize() async {
+    if (supabaseAnonKey.isEmpty) {
+      debugPrint('Supabase notice: anonKey is empty. Running with local mock fallback mode.');
+      return;
+    }
     try {
       await Supabase.initialize(
         url: supabaseUrl,
