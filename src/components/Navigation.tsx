@@ -8,6 +8,7 @@ import {
   ScanLine,
   Library,
   History,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -16,6 +17,7 @@ export type ActiveTab =
   | 'students'
   | 'academics'
   | 'attendance'
+  | 'assessments'
   | 'olympiads'
   | 'omr'
   | 'resources'
@@ -59,6 +61,12 @@ export const Navigation: React.FC<NavigationProps> = ({
       icon: CalendarCheck,
       badge: pendingSyncCount > 0 ? `${pendingSyncCount} pending` : undefined,
       roles: ['admin', 'facilitator', 'mentor', 'student', 'technician'],
+    },
+    {
+      id: 'assessments' as ActiveTab,
+      label: 'Problem Sets & Worksheets',
+      icon: FileSpreadsheet,
+      roles: ['admin', 'facilitator', 'mentor', 'student'],
     },
     {
       id: 'olympiads' as ActiveTab,

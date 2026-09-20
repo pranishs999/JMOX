@@ -282,7 +282,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               ))}
             </div>
 
-            <div className="pt-2 border-t border-white/5">
+            <div className="pt-2 border-t border-white/5 space-y-2">
+              <button
+                onClick={() => onNavigate('assessments')}
+                id="btn-dash-assessments"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors shadow-sm"
+              >
+                <FileSpreadsheet size={15} />
+                Open Problem Sets & Monthly Olympiad
+              </button>
+
               <button
                 onClick={() => onNavigate('omr')}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors"
@@ -316,7 +325,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Quick Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
             onClick={() => onNavigate('attendance')}
             className="group cursor-pointer p-5 rounded-2xl bg-neutral-900/80 border border-white/10 hover:border-emerald-500/40 hover:bg-emerald-950/20 transition-all space-y-3"
@@ -338,14 +347,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div
-            onClick={() => onNavigate('omr')}
+            onClick={() => onNavigate('assessments')}
+            id="card-mentor-problem-sets"
             className="group cursor-pointer p-5 rounded-2xl bg-neutral-900/80 border border-white/10 hover:border-amber-500/40 hover:bg-amber-950/20 transition-all space-y-3"
           >
             <div className="flex items-center justify-between">
               <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <ScanLine size={22} />
+                <FileSpreadsheet size={22} />
               </div>
               <span className="text-xs font-semibold text-amber-400 flex items-center gap-1">
+                Problem Sets <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+              </span>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Assessments & Papers</h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                Configure named blocks, visual puzzles, Olympiad papers, and print student answer sheets.
+              </p>
+            </div>
+          </div>
+
+          <div
+            onClick={() => onNavigate('omr')}
+            className="group cursor-pointer p-5 rounded-2xl bg-neutral-900/80 border border-white/10 hover:border-blue-500/40 hover:bg-blue-950/20 transition-all space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <ScanLine size={22} />
+              </div>
+              <span className="text-xs font-semibold text-blue-400 flex items-center gap-1">
                 Camera View <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
               </span>
             </div>

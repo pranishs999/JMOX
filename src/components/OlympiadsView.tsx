@@ -11,6 +11,7 @@ import {
   FileCheck,
   ChevronRight,
   Printer,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { OlympiadModel, ResultModel } from '../types';
 
@@ -20,6 +21,7 @@ interface OlympiadsViewProps {
   onAddOlympiad: (olympiad: Omit<OlympiadModel, 'id'>) => void;
   selectedScorecard: ResultModel | null;
   onOpenScorecard: (result: ResultModel | null) => void;
+  onNavigateToProblemSet?: (problemSetId?: string) => void;
 }
 
 export const OlympiadsView: React.FC<OlympiadsViewProps> = ({
@@ -28,6 +30,7 @@ export const OlympiadsView: React.FC<OlympiadsViewProps> = ({
   onAddOlympiad,
   selectedScorecard,
   onOpenScorecard,
+  onNavigateToProblemSet,
 }) => {
   const [selectedOlympiadId, setSelectedOlympiadId] = useState<string>(
     olympiads[0]?.id || 'oly-1'
@@ -175,7 +178,7 @@ export const OlympiadsView: React.FC<OlympiadsViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-4 text-right">
+          <div className="flex flex-wrap items-center gap-4 text-right">
             <div>
               <div className="text-[10px] text-neutral-400">Total Enrolled</div>
               <div className="text-lg font-black text-white">
@@ -188,6 +191,18 @@ export const OlympiadsView: React.FC<OlympiadsViewProps> = ({
                 {selectedOlympiad.maxScore} pts
               </div>
             </div>
+            {onNavigateToProblemSet && (
+              <div className="border-l border-white/10 pl-4">
+                <button
+                  onClick={() => onNavigateToProblemSet('ps-001')}
+                  id="btn-view-olympiad-problem-set"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all"
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>View Problem Set & Paper</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

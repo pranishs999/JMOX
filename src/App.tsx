@@ -10,6 +10,7 @@ import { OmrScannerView } from './components/OmrScannerView';
 import { ResourcesView } from './components/ResourcesView';
 import { AuditView } from './components/AuditView';
 import { ImplementationMatrixModal } from './components/ImplementationMatrixModal';
+import { ProblemSetsView } from './components/ProblemSetsView';
 
 import {
   UserRole,
@@ -28,6 +29,7 @@ import {
   AuditLogModel,
   OMRScannedItem,
   TechnicianModel,
+  ProblemSetModel,
 } from './types';
 
 import {
@@ -47,6 +49,7 @@ import {
   initialAuditLogs,
   initialScannedQueue,
   initialImplementationMatrix,
+  initialProblemSets,
 } from './data/mockData';
 
 export function App() {
@@ -106,6 +109,13 @@ export function App() {
     return saved ? JSON.parse(saved) : initialScannedQueue;
   });
 
+  const [problemSets, setProblemSets] = useState<ProblemSetModel[]>(() => {
+    const saved = localStorage.getItem('jmox_problem_sets');
+    return saved ? JSON.parse(saved) : initialProblemSets;
+  });
+
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('ps-001');
+
   // Offline Simulator State
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
@@ -115,6 +125,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem('jmox_students', JSON.stringify(students));
   }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem('jmox_problem_sets', JSON.stringify(problemSets));
+  }, [problemSets]);
 
   useEffect(() => {
     localStorage.setItem('jmox_batches', JSON.stringify(batches));
@@ -355,6 +369,36 @@ export function App() {
     setScannedQueue((prev) => [item, ...prev]);
   };
 
+  const handleAddProblemSet = (newSet: ProblemSetModel) => {
+    setProblemSets((prev) => [newSet, ...prev]);
+    setSelectedAssessmentId(newSet.id);
+    const audit: AuditLogModel = {
+      id: `aud-${Date.now()}`,
+      action: 'CREATE_PROBLEM_SET',
+      entityType: 'ProblemSet',
+      isConflict: false,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      details: `Created problem set assessment "${newSet.header.assessmentTitle}" with ${newSet.blocks.length} blocks and ${newSet.header.totalMarks} marks.`,
+    };
+    setAuditLogs((prev) => [audit, ...prev]);
+  };
+
+  const handleUpdateProblemSet = (updatedSet: ProblemSetModel) => {
+    setProblemSets((prev) =>
+      prev.map((p) => (p.id === updatedSet.id ? updatedSet : p))
+    );
+    setSelectedAssessmentId(updatedSet.id);
+    const audit: AuditLogModel = {
+      id: `aud-${Date.now()}`,
+      action: 'UPDATE_PROBLEM_SET',
+      entityType: 'ProblemSet',
+      isConflict: false,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      details: `Updated problem set "${updatedSet.header.assessmentTitle}" blocks configuration and question schema.`,
+    };
+    setAuditLogs((prev) => [audit, ...prev]);
+  };
+
   const handleMarkAllNotificationsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
@@ -438,6 +482,17 @@ export function App() {
           />
         )}
 
+        {activeTab === 'assessments' && (
+          <ProblemSetsView
+            problemSets={problemSets}
+            onAddProblemSet={handleAddProblemSet}
+            onUpdateProblemSet={handleUpdateProblemSet}
+            currentRole={currentRole}
+            students={students}
+            selectedProblemSetId={selectedAssessmentId}
+          />
+        )}
+
         {activeTab === 'olympiads' && (
           <OlympiadsView
             olympiads={olympiads}
@@ -445,6 +500,10 @@ export function App() {
             onAddOlympiad={handleAddOlympiad}
             selectedScorecard={selectedScorecard}
             onOpenScorecard={setSelectedScorecard}
+            onNavigateToProblemSet={(psId) => {
+              if (psId) setSelectedAssessmentId(psId);
+              setActiveTab('assessments');
+            }}
           />
         )}
 

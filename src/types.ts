@@ -201,3 +201,88 @@ export interface ImplementationMatrixItem {
   tests: string;
   status: 'Complete' | 'Verified' | 'Active';
 }
+
+export type QuestionType = 'mcq' | 'numerical' | 'visual_puzzle' | 'short_answer';
+
+export interface QuestionOption {
+  id: string; // 'A', 'B', 'C', 'D', 'E'
+  text: string;
+}
+
+export type DiagramType =
+  | 'geometry_triangle_circle'
+  | 'geometry_trapezoid'
+  | 'pattern_matrix'
+  | 'sudoku_grid'
+  | 'clock_angle'
+  | 'maze_graph'
+  | 'custom_url'
+  | 'none';
+
+export interface QuestionDiagram {
+  type: DiagramType;
+  title?: string;
+  svgData?: string;
+  imageUrl?: string;
+}
+
+export interface ProblemQuestion {
+  id: string;
+  questionNumber: number;
+  type: QuestionType;
+  text: string;
+  diagram?: QuestionDiagram;
+  options?: QuestionOption[];
+  positiveMarks: number;
+  negativeMarks?: number;
+  correctAnswer: string; // Option id (e.g. 'B') or numerical string ('42')
+  explanation: string;
+  tag?: string; // e.g. 'Everyday Math', 'Geometry', 'Combinatorics', 'Logic', 'Puzzle'
+}
+
+export interface ProblemSetBlock {
+  id: string;
+  blockNumber: number;
+  title: string; // e.g. "Block 1 — Everyday Mathematics"
+  description?: string;
+  instructions?: string;
+  questions: ProblemQuestion[];
+}
+
+export interface ProblemSetHeader {
+  instituteName: string; // e.g. "JMS BRANCH – HRIC"
+  divisionName: string; // e.g. "HETAUDA RESEARCH & INNOVATION CENTER / ACADEMIC MATHEMATICS DIVISION"
+  assessmentTitle: string; // e.g. "Monthly Olympiad"
+  academicYear: string; // e.g. "2025-2026"
+  className: string; // e.g. "Class 8"
+  batchName?: string; // e.g. "Batch Alpha"
+  date: string; // e.g. "2026-10-15"
+  durationMinutes: number; // e.g. 60
+  totalMarks: number;
+  instructions: string[];
+}
+
+export interface ProblemSetModel {
+  id: string;
+  olympiadId?: string;
+  code: string;
+  category: 'Monthly Olympiad' | 'Weekly Worksheet' | 'Diagnostic Test' | 'Practice Problem Set';
+  status: 'draft' | 'published' | 'scheduled' | 'archived';
+  header: ProblemSetHeader;
+  blocks: ProblemSetBlock[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentSubmission {
+  problemSetId: string;
+  studentId: string;
+  studentName: string;
+  studentPublicId: string;
+  answers: Record<string, string>;
+  startedAt: string;
+  completedAt: string;
+  score: number;
+  maxScore: number;
+  blockScores: Record<string, { scored: number; total: number; correctCount: number; totalQuestions: number }>;
+}

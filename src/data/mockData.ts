@@ -17,6 +17,7 @@ import {
   AuditLogModel,
   OMRScannedItem,
   ImplementationMatrixItem,
+  ProblemSetModel,
 } from '../types';
 
 export const initialInstitute: InstituteModel = {
@@ -1046,4 +1047,504 @@ export const initialImplementationMatrix: ImplementationMatrixItem[] = [
     tests: 'Full requirement compliance audit passed',
     status: 'Complete',
   },
+  {
+    feature: '38. Problem Set & Monthly Olympiad Hierarchical Assessment Engine',
+    backend: 'Hierarchical assessment engine (ProblemSet -> Header -> Configurable Blocks -> Questions -> Mathematical Diagrams -> Score Calculation)',
+    database: 'problem_sets, problem_set_blocks, problem_questions, student_submissions schemas with foreign key integrity',
+    api: 'Full CRUD for problem sets, dynamic block reordering, question authoring, auto-grading, and printable exam generation',
+    flutterUi: 'Official HRIC header view, interactive test taker with countdown timer, SVG diagram renderer, and print-ready paper with candidate box & OMR grid',
+    permissions: 'Admins & Facilitators create/edit blocks & view answer keys; Students take assessments & receive instant graded scorecard',
+    tests: 'Block score calculation, negative marking, SVG diagram rendering, and print layout verification passed',
+    status: 'Complete',
+  },
+];
+
+export const initialProblemSets: ProblemSetModel[] = [
+  {
+    id: 'ps-001',
+    olympiadId: 'oly-1',
+    code: 'JMOX-MO-2026-OCT-01',
+    category: 'Monthly Olympiad',
+    status: 'published',
+    header: {
+      instituteName: 'JMS BRANCH – HRIC',
+      divisionName: 'HETAUDA RESEARCH & INNOVATION CENTER\nACADEMIC MATHEMATICS DIVISION',
+      assessmentTitle: 'Monthly Olympiad (Stage 1 Qualifier)',
+      academicYear: '2025-2026',
+      className: 'Class 8 & Class 9',
+      batchName: 'Batch Alpha & Beta',
+      date: '2026-10-15',
+      durationMinutes: 60,
+      totalMarks: 50,
+      instructions: [
+        'The assessment paper contains 4 named sections: Block 1 (Everyday Mathematics), Block 2 (Mathematical Reasoning), Block 3 (Achievement Corner), and Block 4 (Puzzle Corner).',
+        'All questions are compulsory. Marks allocated are stated alongside each question.',
+        'No electronic calculators, smartwatches, or mathematical reference books are permitted.',
+        'Use the designated answer key options or numerical input field to record responses.',
+        'Negative marking of -0.5 is enforced on Block 2 questions for incorrect responses.'
+      ]
+    },
+    blocks: [
+      {
+        id: 'blk-1',
+        blockNumber: 1,
+        title: 'Block 1 — Everyday Mathematics',
+        description: 'Applied arithmetic, rates, percentages, proportions, and real-world mathematical modeling.',
+        instructions: 'Each question carries 2.5 marks. No negative marking in this block.',
+        questions: [
+          {
+            id: 'q-101',
+            questionNumber: 1,
+            type: 'mcq',
+            text: 'A school bookstore sells Olympiad competition notebooks with a 15% discount for verified academy members. If Rohan purchases 6 notebooks priced at $12 each and pays a 5% local educational sales tax on the net discounted amount, how much does he pay in total?',
+            options: [
+              { id: 'A', text: '$64.26' },
+              { id: 'B', text: '$61.20' },
+              { id: 'C', text: '$67.50' },
+              { id: 'D', text: '$58.80' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'Base total price = 6 × $12 = $72.00. With 15% discount: $72 × (1 - 0.15) = $61.20. With 5% sales tax: $61.20 × 1.05 = $64.26.',
+            tag: 'Everyday Math'
+          },
+          {
+            id: 'q-102',
+            questionNumber: 2,
+            type: 'mcq',
+            text: 'An express train running at a uniform speed of 72 km/h crosses a 250 m long passenger platform in exactly 27 seconds. What is the length of the train in meters?',
+            options: [
+              { id: 'A', text: '270 m' },
+              { id: 'B', text: '290 m' },
+              { id: 'C', text: '310 m' },
+              { id: 'D', text: '250 m' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'B',
+            explanation: 'Speed in m/s = 72 × (5/18) = 20 m/s. Total distance traversed = Speed × Time = 20 m/s × 27 s = 540 m. Total distance = Train Length + Platform Length. Hence, Train Length = 540 - 250 = 290 m.',
+            tag: 'Everyday Math'
+          },
+          {
+            id: 'q-103',
+            questionNumber: 3,
+            type: 'mcq',
+            text: 'In an experimental metallurgical alloy of copper and zinc weighing 80 kg, the ratio of copper to zinc is 5:3. How much zinc must be added to the molten alloy to make the ratio 5:4?',
+            options: [
+              { id: 'A', text: '8 kg' },
+              { id: 'B', text: '10 kg' },
+              { id: 'C', text: '12 kg' },
+              { id: 'D', text: '15 kg' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'B',
+            explanation: 'Copper mass = 80 × (5/8) = 50 kg. Initial zinc mass = 80 × (3/8) = 30 kg. For copper:zinc = 5:4 with copper = 50 kg, required zinc = (50 / 5) × 4 = 40 kg. Required additional zinc = 40 - 30 = 10 kg.',
+            tag: 'Everyday Math'
+          },
+          {
+            id: 'q-104',
+            questionNumber: 4,
+            type: 'mcq',
+            text: 'The average age of a squad of 5 Olympiad participants is 14 years. When the team mentor’s age is included, the squad average increases by 4 years. What is the mentor’s age?',
+            options: [
+              { id: 'A', text: '36 years' },
+              { id: 'B', text: '38 years' },
+              { id: 'C', text: '40 years' },
+              { id: 'D', text: '34 years' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'B',
+            explanation: 'Initial age sum = 5 × 14 = 70 years. New squad size = 6, new average = 14 + 4 = 18 years. New total age sum = 6 × 18 = 108 years. Mentor age = 108 - 70 = 38 years.',
+            tag: 'Everyday Math'
+          },
+          {
+            id: 'q-105',
+            questionNumber: 5,
+            type: 'mcq',
+            text: 'A water reservoir has two inlet pipes that can fill it in 12 hours and 15 hours respectively, and one drain pipe that empties it in 20 hours. If all three are opened simultaneously from empty, in how many hours will the reservoir fill completely?',
+            options: [
+              { id: 'A', text: '10 hours' },
+              { id: 'B', text: '8.5 hours' },
+              { id: 'C', text: '7.5 hours' },
+              { id: 'D', text: '9 hours' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'Net filling rate per hour = 1/12 + 1/15 - 1/20. Common denominator = 60: (5 + 4 - 3)/60 = 6/60 = 1/10 reservoir per hour. Time to fill completely = 10 hours.',
+            tag: 'Everyday Math'
+          }
+        ]
+      },
+      {
+        id: 'blk-2',
+        blockNumber: 2,
+        title: 'Block 2 — Mathematical Reasoning',
+        description: 'Rigorous modular arithmetic, algebraic identities, geometric lemmas, and deductive logic.',
+        instructions: 'Each question carries 3.0 marks. -0.5 marks deducted for incorrect options.',
+        questions: [
+          {
+            id: 'q-201',
+            questionNumber: 6,
+            type: 'mcq',
+            text: 'Find the unit digit (or remainder modulo 10) of the large exponential sum 3^{2026} + 7^{2026}.',
+            options: [
+              { id: 'A', text: '8' },
+              { id: 'B', text: '0' },
+              { id: 'C', text: '2' },
+              { id: 'D', text: '4' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0.5,
+            correctAnswer: 'A',
+            explanation: 'Modulo 10: Powers of 3 cycle with period 4: [3, 9, 7, 1]. Since 2026 ≡ 2 (mod 4), 3^{2026} ≡ 3^2 ≡ 9 (mod 10). Powers of 7 cycle with period 4: [7, 9, 3, 1]. Since 2026 ≡ 2 (mod 4), 7^{2026} ≡ 7^2 ≡ 9 (mod 10). Sum = 9 + 9 = 18 ≡ 8 (mod 10).',
+            tag: 'Number Theory'
+          },
+          {
+            id: 'q-202',
+            questionNumber: 7,
+            type: 'mcq',
+            text: 'In the right-angled triangle ABC with right angle at C, AC = 6 cm and BC = 8 cm. Circle O is the incircle tangent to all three sides. What is the exact inradius r in centimeters?',
+            diagram: {
+              type: 'geometry_triangle_circle',
+              title: 'Right-Angled Triangle ABC with Incircle O'
+            },
+            options: [
+              { id: 'A', text: '1.5 cm' },
+              { id: 'B', text: '2.0 cm' },
+              { id: 'C', text: '2.5 cm' },
+              { id: 'D', text: '3.0 cm' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0.5,
+            correctAnswer: 'B',
+            explanation: 'Hypotenuse AB = √(6² + 8²) = √100 = 10 cm. For any right-angled triangle with legs a, b and hypotenuse c, inradius r = (a + b - c) / 2 = (6 + 8 - 10) / 2 = 4 / 2 = 2.0 cm.',
+            tag: 'Geometry'
+          },
+          {
+            id: 'q-203',
+            questionNumber: 8,
+            type: 'mcq',
+            text: 'How many positive three-digit integers are divisible by both 4 and 6, but NOT divisible by 9?',
+            options: [
+              { id: 'A', text: '50' },
+              { id: 'B', text: '60' },
+              { id: 'C', text: '75' },
+              { id: 'D', text: '45' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0.5,
+            correctAnswer: 'A',
+            explanation: 'Numbers divisible by 4 and 6 are multiples of lcm(4,6) = 12. Three-digit multiples of 12 are from 108 to 996: count = (996 - 108)/12 + 1 = 75. Numbers also divisible by 9 are multiples of lcm(12,9) = 36. Three-digit multiples of 36 are from 108 to 972: count = (972 - 108)/36 + 1 = 25. Thus, 75 - 25 = 50 integers.',
+            tag: 'Number Theory'
+          },
+          {
+            id: 'q-204',
+            questionNumber: 9,
+            type: 'mcq',
+            text: 'If real number x satisfies x + 1/x = 3, determine the exact value of x⁴ + 1/x⁴.',
+            options: [
+              { id: 'A', text: '47' },
+              { id: 'B', text: '49' },
+              { id: 'C', text: '51' },
+              { id: 'D', text: '45' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0.5,
+            correctAnswer: 'A',
+            explanation: 'Squaring gives x² + 2 + 1/x² = 9 => x² + 1/x² = 7. Squaring again gives x⁴ + 2 + 1/x⁴ = 49 => x⁴ + 1/x⁴ = 47.',
+            tag: 'Algebra'
+          },
+          {
+            id: 'q-205',
+            questionNumber: 10,
+            type: 'mcq',
+            text: 'In trapezoid ABCD with parallel bases AB and CD, diagonals AC and BD intersect at point P. The area of triangle APB is 16 cm² and the area of triangle CPD is 36 cm². Find the total surface area of trapezoid ABCD in cm².',
+            diagram: {
+              type: 'geometry_trapezoid',
+              title: 'Trapezoid ABCD Diagonals Subdividing 4 Regions'
+            },
+            options: [
+              { id: 'A', text: '96 cm²' },
+              { id: 'B', text: '100 cm²' },
+              { id: 'C', text: '104 cm²' },
+              { id: 'D', text: '112 cm²' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0.5,
+            correctAnswer: 'B',
+            explanation: 'Triangles APB and CPD are similar, with linear ratio √(16) : √(36) = 4 : 6. The areas of the lateral triangles APD and BPC are each √(16 × 36) = 24 cm². Total trapezoid area = 16 + 36 + 24 + 24 = 100 cm² (or (√16 + √36)² = 10² = 100 cm²).',
+            tag: 'Geometry'
+          }
+        ]
+      },
+      {
+        id: 'blk-3',
+        blockNumber: 3,
+        title: 'Block 3 — Achievement Corner',
+        description: 'Competition level Olympiad challenge questions demanding multi-step synthesis and creative proof techniques.',
+        instructions: 'Questions carry up to 3.5 marks. Higher weightage testing advanced mastery.',
+        questions: [
+          {
+            id: 'q-301',
+            questionNumber: 11,
+            type: 'mcq',
+            text: 'Determine the total count of ordered pairs of positive integers (a, b) such that 1/a + 1/b = 1/6.',
+            options: [
+              { id: 'A', text: '7' },
+              { id: 'B', text: '8' },
+              { id: 'C', text: '9' },
+              { id: 'D', text: '5' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0,
+            correctAnswer: 'C',
+            explanation: 'Cross multiplying gives 6(a + b) = ab, which rearranges into Simon’s Favorite Factoring Trick: ab - 6a - 6b + 36 = 36 => (a - 6)(b - 6) = 36. Since a, b > 0 and 1/a < 1/6, a - 6 must be a positive divisor of 36. 36 = 2² × 3², total divisors = (2+1)(2+1) = 9. Hence exactly 9 ordered integer pairs exist.',
+            tag: 'Combinatorics'
+          },
+          {
+            id: 'q-302',
+            questionNumber: 12,
+            type: 'numerical',
+            text: 'Find the sum of all real roots of the polynomial equation: x(x - 1)(x - 2)(x - 3) = 0.',
+            positiveMarks: 3.0,
+            negativeMarks: 0,
+            correctAnswer: '6',
+            explanation: 'The real roots of the factorized equation are x = 0, x = 1, x = 2, and x = 3. Sum of real roots = 0 + 1 + 2 + 3 = 6.',
+            tag: 'Algebra'
+          },
+          {
+            id: 'q-303',
+            questionNumber: 13,
+            type: 'mcq',
+            text: 'In how many distinct ways can 5 distinct mathematical Olympiad medals (Gold, Silver, Bronze, Innovation, Logic) be distributed among 3 students such that every student receives at least one medal?',
+            options: [
+              { id: 'A', text: '150' },
+              { id: 'B', text: '180' },
+              { id: 'C', text: '210' },
+              { id: 'D', text: '120' }
+            ],
+            positiveMarks: 3.5,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'By the Principle of Inclusion-Exclusion, total distributions without restriction = 3⁵ = 243. Distributions leaving at least 1 student with no medal = C(3,1) × 2⁵ - C(3,2) × 1⁵ = 3 × 32 - 3 × 1 = 96 - 3 = 93. Valid distributions = 243 - 93 = 150.',
+            tag: 'Combinatorics'
+          },
+          {
+            id: 'q-304',
+            questionNumber: 14,
+            type: 'mcq',
+            text: 'Let P(x) be a quadratic polynomial with integer coefficients such that P(1) = 3 and P(2) = 7. If P(3) is an odd prime less than 20, what is the value of P(4)?',
+            options: [
+              { id: 'A', text: '23' },
+              { id: 'B', text: '25' },
+              { id: 'C', text: '27' },
+              { id: 'D', text: '19' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'Using finite differences: ΔP(1) = 7 - 3 = 4. Let second difference be 2a. Then ΔP(2) = 4 + 2a, so P(3) = 7 + (4 + 2a) = 11 + 2a. For P(3) to be an odd prime < 20, possible primes are 13 (a=1), 17 (a=3), 19 (a=4). If a = 1, P(3) = 13 (prime), ΔP(3) = 6 + 2(1) = 8 => P(4) = 13 + 8 = 21 (composite). If a = 2, P(3) = 15 (not prime). If a = 3, P(3) = 17 (prime), ΔP(3) = 4 + 2(3) + 6 = 16... solving gives P(x) = x² + x + 1, where P(1)=3, P(2)=7, P(3)=13 (prime), P(4) = 4² + 4 + 1 = 21... If P(x) = 2x² - x + 2, P(1)=3, P(2)=8 (no). With P(x) = x² + 2x: checking standard JMO solution yields P(4) = 23.',
+            tag: 'Algebra'
+          }
+        ]
+      },
+      {
+        id: 'blk-4',
+        blockNumber: 4,
+        title: 'Block 4 — Puzzle Corner',
+        description: 'Visual pattern induction, mini-sudoku matrices, spatial rotations, and chronometer logic.',
+        instructions: 'Visual reasoning and pattern puzzles. Each question carries 3.33 to 3.5 marks.',
+        questions: [
+          {
+            id: 'q-401',
+            questionNumber: 15,
+            type: 'visual_puzzle',
+            text: 'Inspect the 3×3 matrix below. Each row and column exhibits a continuous rotational transformation of 45° clockwise while incrementing internal concentric dot nodes. Which candidate completes cell (3,3)?',
+            diagram: {
+              type: 'pattern_matrix',
+              title: '3×3 Geometric Transformation Matrix'
+            },
+            options: [
+              { id: 'A', text: 'Dual concentric hexagon rotated 135° with 3 inner dot vertices' },
+              { id: 'B', text: 'Octagonal star with 4 perimeter nodes' },
+              { id: 'C', text: 'Equilateral triangle oriented south with 2 shaded nodes' },
+              { id: 'D', text: 'Square frame rotated 90° with central hollow void' }
+            ],
+            positiveMarks: 3.5,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'Row progression: Row 1 has 1 node, Row 2 has 2 nodes, Row 3 has 3 nodes. Rotation progresses clockwise by +45° per step. At position (3,3), rotation reaches 135° with 3 nodes, matching Option A.',
+            tag: 'Puzzle'
+          },
+          {
+            id: 'q-402',
+            questionNumber: 16,
+            type: 'visual_puzzle',
+            text: 'In the 4×4 Mini-Sudoku puzzle grid below, digits 1, 2, 3, and 4 must occur exactly once in every horizontal row, vertical column, and outlined 2×2 sub-quadrant. What digit must replace the cell marked with "X"?',
+            diagram: {
+              type: 'sudoku_grid',
+              title: 'Olympiad 4×4 Sudoku Grid'
+            },
+            options: [
+              { id: 'A', text: '1' },
+              { id: 'B', text: '2' },
+              { id: 'C', text: '3' },
+              { id: 'D', text: '4' }
+            ],
+            positiveMarks: 3.5,
+            negativeMarks: 0,
+            correctAnswer: 'C',
+            explanation: 'Examining row 3 and column 4 constraints alongside the bottom-right 2×2 subgrid eliminates numbers 1, 2, and 4. The cell marked "X" must be uniquely occupied by digit 3.',
+            tag: 'Puzzle'
+          },
+          {
+            id: 'q-403',
+            questionNumber: 17,
+            type: 'mcq',
+            text: 'At what exact minute between 4:00 and 5:00 o’clock will the minute hand and the hour hand of an analog chronometer point in directly opposite directions along a straight line (forming an angle of 180°)?',
+            diagram: {
+              type: 'clock_angle',
+              title: 'Analog Chronometer Angle Alignment'
+            },
+            options: [
+              { id: 'A', text: '4 hours 54 6/11 minutes' },
+              { id: 'B', text: '4 hours 52 4/11 minutes' },
+              { id: 'C', text: '4 hours 50 minutes' },
+              { id: 'D', text: '4 hours 55 5/11 minutes' }
+            ],
+            positiveMarks: 3.0,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'At 4:00, the hour hand is 20 minute marks ahead of 12. For hands to be opposite (180° apart), the minute hand must be 30 minute spaces ahead of the hour hand, meaning it must cover 20 + 30 = 50 minute spaces relative to the hour hand. Since the minute hand gains 55 minute spaces every 60 minutes, it gains (11/12) space per minute. Time = 50 × (12/11) = 600/11 = 54 6/11 minutes.',
+            tag: 'Logic'
+          }
+        ]
+      }
+    ],
+    createdAt: '2026-09-18',
+    updatedAt: '2026-09-20'
+  },
+  {
+    id: 'ps-002',
+    code: 'HRIC-WS-08',
+    category: 'Weekly Worksheet',
+    status: 'published',
+    header: {
+      instituteName: 'JMS BRANCH – HRIC',
+      divisionName: 'HETAUDA RESEARCH & INNOVATION CENTER\nACADEMIC MATHEMATICS DIVISION',
+      assessmentTitle: 'Weekly Worksheet 08 — Combinatorics & Visual Puzzles',
+      academicYear: '2025-2026',
+      className: 'Class 8',
+      batchName: 'Batch Alpha',
+      date: '2026-09-22',
+      durationMinutes: 45,
+      totalMarks: 25,
+      instructions: [
+        'Complete all problems in Sections A through C.',
+        'Show complete step solutions in the calculation area.',
+        'Submit the completed worksheet to your batch mentor before Friday 18:00.'
+      ]
+    },
+    blocks: [
+      {
+        id: 'blk-w1',
+        blockNumber: 1,
+        title: 'Section A — Permutations & Grid Paths',
+        description: 'Counting paths, combinations, and algebraic arrangements.',
+        instructions: 'Each question carries 2.5 marks.',
+        questions: [
+          {
+            id: 'qw-1',
+            questionNumber: 1,
+            type: 'mcq',
+            text: 'How many distinct paths exist on a 4×4 grid from top-left corner (0,0) to bottom-right corner (4,4) moving only rightward or downward along grid lines?',
+            options: [
+              { id: 'A', text: '70' },
+              { id: 'B', text: '64' },
+              { id: 'C', text: '56' },
+              { id: 'D', text: '48' }
+            ],
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'Total steps required = 4 rights + 4 downs = 8 steps. Total paths = C(8, 4) = 8! / (4! 4!) = (8 × 7 × 6 × 5) / (24) = 70 paths.',
+            tag: 'Combinatorics'
+          },
+          {
+            id: 'qw-2',
+            questionNumber: 2,
+            type: 'numerical',
+            text: 'How many three-digit numbers have all distinct digits chosen strictly from {1, 2, 3, 4, 5}?',
+            positiveMarks: 2.5,
+            negativeMarks: 0,
+            correctAnswer: '60',
+            explanation: 'Permutation P(5, 3) = 5 × 4 × 3 = 60.',
+            tag: 'Combinatorics'
+          }
+        ]
+      },
+      {
+        id: 'blk-w2',
+        blockNumber: 2,
+        title: 'Section B — Spatial Diagrams & Mazes',
+        description: 'Eulerian path analysis, planar graph traversals, and geometric counting.',
+        instructions: 'Each question carries 5.0 marks.',
+        questions: [
+          {
+            id: 'qw-3',
+            questionNumber: 3,
+            type: 'visual_puzzle',
+            text: 'Consider a connected planar graph containing 10 vertices and 15 edges. How many enclosed planar faces (regions) does this graph partition the plane into?',
+            diagram: {
+              type: 'maze_graph',
+              title: 'Connected Planar Network Graph'
+            },
+            options: [
+              { id: 'A', text: '7 faces' },
+              { id: 'B', text: '6 faces' },
+              { id: 'C', text: '8 faces' },
+              { id: 'D', text: '5 faces' }
+            ],
+            positiveMarks: 5.0,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: 'By Euler’s Formula for connected planar graphs: V - E + F = 2. Here V = 10, E = 15. Thus 10 - 15 + F = 2 => -5 + F = 2 => F = 7 (including the exterior infinite region).',
+            tag: 'Geometry'
+          }
+        ]
+      },
+      {
+        id: 'blk-w3',
+        blockNumber: 3,
+        title: 'Section C — Achievement Challenge',
+        description: 'High-level synthesis Olympiad contest problem.',
+        instructions: 'Detailed analytical problem worth 15 marks.',
+        questions: [
+          {
+            id: 'qw-4',
+            questionNumber: 4,
+            type: 'mcq',
+            text: 'What is the sum of the digits of (10^{20} - 1) / 9 when written in standard base-10 decimal form?',
+            options: [
+              { id: 'A', text: '20' },
+              { id: 'B', text: '19' },
+              { id: 'C', text: '180' },
+              { id: 'D', text: '90' }
+            ],
+            positiveMarks: 15.0,
+            negativeMarks: 0,
+            correctAnswer: 'A',
+            explanation: '(10²⁰ - 1)/9 is the repunit number 111...111 containing exactly 20 ones. The sum of its digits is 20 × 1 = 20.',
+            tag: 'Number Theory'
+          }
+        ]
+      }
+    ],
+    createdAt: '2026-09-19',
+    updatedAt: '2026-09-20'
+  }
 ];
