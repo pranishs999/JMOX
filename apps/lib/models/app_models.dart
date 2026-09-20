@@ -1,17 +1,21 @@
 // JMO Management System — Unified Domain Models
 import 'package:flutter/foundation.dart';
 
-enum UserRole { admin, teacher, student }
+enum UserRole { admin, facilitator, mentor, student, technician }
 
 extension UserRoleExtension on UserRole {
   String get value {
     switch (this) {
       case UserRole.admin:
         return 'admin';
-      case UserRole.teacher:
-        return 'teacher';
+      case UserRole.facilitator:
+        return 'facilitator';
+      case UserRole.mentor:
+        return 'mentor';
       case UserRole.student:
         return 'student';
+      case UserRole.technician:
+        return 'technician';
     }
   }
 
@@ -19,14 +23,113 @@ extension UserRoleExtension on UserRole {
     switch (roleStr.toLowerCase()) {
       case 'admin':
         return UserRole.admin;
-      case 'teacher':
       case 'facilitator':
-        return UserRole.teacher;
+        return UserRole.facilitator;
+      case 'mentor':
+        return UserRole.mentor;
+      case 'technician':
+        return UserRole.technician;
       case 'student':
         return UserRole.student;
       default:
         return UserRole.student;
     }
+  }
+}
+
+class InstituteModel {
+  final String id;
+  final String name;
+  final String code;
+  final String activeAcademicYear;
+  final String timezone;
+  final String contactEmail;
+  final String status;
+
+  InstituteModel({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.activeAcademicYear,
+    required this.timezone,
+    required this.contactEmail,
+    this.status = 'active',
+  });
+
+  factory InstituteModel.fromJson(Map<String, dynamic> json) {
+    return InstituteModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      code: json['code'] as String,
+      activeAcademicYear: json['active_academic_year'] ?? '2025-2026',
+      timezone: json['timezone'] ?? 'UTC',
+      contactEmail: json['contact_email'] ?? 'admin@jmo.org',
+      status: json['status'] ?? 'active',
+    );
+  }
+}
+
+class AcademicYearModel {
+  final String id;
+  final String name;
+  final String startDate;
+  final String endDate;
+  final String status; // active, archived, upcoming
+  final int batchesCount;
+  final int studentsCount;
+
+  AcademicYearModel({
+    required this.id,
+    required this.name,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+    this.batchesCount = 0,
+    this.studentsCount = 0,
+  });
+
+  factory AcademicYearModel.fromJson(Map<String, dynamic> json) {
+    return AcademicYearModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      startDate: json['start_date'] as String,
+      endDate: json['end_date'] as String,
+      status: json['status'] ?? 'active',
+      batchesCount: json['batches_count'] ?? 0,
+      studentsCount: json['students_count'] ?? 0,
+    );
+  }
+}
+
+class TechnicianModel {
+  final String id;
+  final String publicId;
+  final String fullName;
+  final String email;
+  final String assignedZone;
+  final String status;
+  final bool hasAcademicControl; // Strictly false by default per specification
+
+  TechnicianModel({
+    required this.id,
+    required this.publicId,
+    required this.fullName,
+    required this.email,
+    required this.assignedZone,
+    this.status = 'active',
+    this.hasAcademicControl = false,
+  });
+
+  factory TechnicianModel.fromJson(Map<String, dynamic> json) {
+    return TechnicianModel(
+      id: json['id'] as String,
+      publicId: json['public_id'] ?? 'TECH-000',
+      fullName: json['full_name'] as String,
+      email: json['email'] as String,
+      assignedZone: json['assigned_zone'] ?? 'Hardware & Labs',
+      status: json['status'] ?? 'active',
+      hasAcademicControl: false,
+    );
   }
 }
 

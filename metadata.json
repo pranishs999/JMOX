@@ -1,0 +1,6 @@
+{
+  "name": "JMOX - Olympiad Management System",
+  "description": "Unified platform for Junior Mathematics Olympiad programs: student directory, attendance logging, competition rankings, and OMR assessment.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

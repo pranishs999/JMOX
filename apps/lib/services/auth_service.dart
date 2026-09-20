@@ -29,13 +29,28 @@ class AuthService extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 600));
 
     // Demo authentication handling
+    String publicId = 'USR-SA-001';
+    switch (selectedRole) {
+      case UserRole.admin:
+        publicId = 'USR-SA-001';
+        break;
+      case UserRole.facilitator:
+        publicId = 'FAC-41029';
+        break;
+      case UserRole.mentor:
+        publicId = 'MNT-32018';
+        break;
+      case UserRole.technician:
+        publicId = 'TECH-7701';
+        break;
+      case UserRole.student:
+        publicId = 'STU-98214';
+        break;
+    }
+
     _currentUser = UserModel(
       id: 'usr-demo-1',
-      publicId: selectedRole == UserRole.admin
-          ? 'USR-SA-001'
-          : selectedRole == UserRole.teacher
-              ? 'TCH-41029'
-              : 'STU-98214',
+      publicId: publicId,
       email: email.isNotEmpty ? email : 'admin@jmo.org',
       role: selectedRole,
       status: 'active',
@@ -48,13 +63,28 @@ class AuthService extends ChangeNotifier {
 
   void switchRole(UserRole newRole) {
     if (_currentUser == null) return;
+    String publicId = 'USR-SA-001';
+    switch (newRole) {
+      case UserRole.admin:
+        publicId = 'USR-SA-001';
+        break;
+      case UserRole.facilitator:
+        publicId = 'FAC-41029';
+        break;
+      case UserRole.mentor:
+        publicId = 'MNT-32018';
+        break;
+      case UserRole.technician:
+        publicId = 'TECH-7701';
+        break;
+      case UserRole.student:
+        publicId = 'STU-98214';
+        break;
+    }
+
     _currentUser = UserModel(
       id: _currentUser!.id,
-      publicId: newRole == UserRole.admin
-          ? 'USR-SA-001'
-          : newRole == UserRole.teacher
-              ? 'TCH-41029'
-              : 'STU-98214',
+      publicId: publicId,
       email: _currentUser!.email,
       role: newRole,
       status: 'active',

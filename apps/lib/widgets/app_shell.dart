@@ -64,9 +64,11 @@ class AppShell extends StatelessWidget {
                   Icon(
                     auth.role == UserRole.admin
                         ? Icons.admin_panel_settings
-                        : auth.role == UserRole.teacher
+                        : (auth.role == UserRole.facilitator || auth.role == UserRole.mentor)
                             ? Icons.psychology
-                            : Icons.person,
+                            : auth.role == UserRole.technician
+                                ? Icons.build_circle
+                                : Icons.person,
                     size: 16,
                     color: Colors.amber,
                   ),
@@ -93,12 +95,22 @@ class AppShell extends StatelessWidget {
                 ),
               ),
               const PopupMenuItem(
-                value: UserRole.teacher,
+                value: UserRole.facilitator,
                 child: Row(
                   children: [
                     Icon(Icons.psychology, size: 18, color: Colors.blue),
                     SizedBox(width: 8),
-                    Text('Facilitator / Mentor View'),
+                    Text('Facilitator View'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: UserRole.mentor,
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_stories, size: 18, color: Colors.teal),
+                    SizedBox(width: 8),
+                    Text('Mentor View'),
                   ],
                 ),
               ),
@@ -109,6 +121,16 @@ class AppShell extends StatelessWidget {
                     Icon(Icons.person, size: 18, color: Color(0xFF10B981)),
                     SizedBox(width: 8),
                     Text('Student View'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: UserRole.technician,
+                child: Row(
+                  children: [
+                    Icon(Icons.build_circle, size: 18, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Technician View (Diagnostics)'),
                   ],
                 ),
               ),
@@ -235,39 +257,47 @@ class AppShell extends StatelessWidget {
   List<Map<String, dynamic>> _getNavItems(UserRole role) {
     if (role == UserRole.admin) {
       return [
-        {'title': 'Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
-        {'title': 'Students Directory', 'route': '/students', 'icon': Icons.people_alt_rounded},
-        {'title': 'Facilitators / Teachers', 'route': '/teachers', 'icon': Icons.badge_rounded},
+        {'title': 'Institute Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
+        {'title': 'Student Directory', 'route': '/students', 'icon': Icons.people_alt_rounded},
+        {'title': 'Facilitators & Mentors', 'route': '/teachers', 'icon': Icons.badge_rounded},
         {'title': 'Classes', 'route': '/classes', 'icon': Icons.school_rounded},
         {'title': 'Batches', 'route': '/batches', 'icon': Icons.grid_view_rounded},
         {'title': 'Subjects', 'route': '/subjects', 'icon': Icons.menu_book_rounded},
         {'title': 'Attendance', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
-        {'title': 'Olympiads', 'route': '/olympiads', 'icon': Icons.emoji_events_rounded},
-        {'title': 'Results & Ranks', 'route': '/results', 'icon': Icons.military_tech_rounded},
+        {'title': 'Olympiads & Exams', 'route': '/olympiads', 'icon': Icons.emoji_events_rounded},
+        {'title': 'Rankings & Results', 'route': '/results', 'icon': Icons.military_tech_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
         {'title': 'Notifications', 'route': '/notifications', 'icon': Icons.notifications_active_rounded},
         {'title': 'Audit Logs', 'route': '/audit-logs', 'icon': Icons.security_rounded},
       ];
-    } else if (role == UserRole.teacher) {
+    } else if (role == UserRole.facilitator || role == UserRole.mentor) {
       return [
-        {'title': 'Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
-        {'title': 'My Batches & Students', 'route': '/students', 'icon': Icons.groups_rounded},
+        {'title': 'Facilitator Portal', 'route': '/', 'icon': Icons.dashboard_rounded},
+        {'title': 'Assigned Batches & Students', 'route': '/students', 'icon': Icons.groups_rounded},
         {'title': 'Attendance Marking', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
         {'title': 'OMR Camera Scanner', 'route': '/omr-scanner', 'icon': Icons.camera_alt_rounded},
-        {'title': 'Results', 'route': '/results', 'icon': Icons.military_tech_rounded},
+        {'title': 'Olympiad Results', 'route': '/results', 'icon': Icons.military_tech_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Books Catalog', 'route': '/books', 'icon': Icons.book_rounded},
+      ];
+    } else if (role == UserRole.technician) {
+      // Technician: Diagnostics, sync queue, device calibration, audit trail - NO academic edit control
+      return [
+        {'title': 'Diagnostics Console', 'route': '/', 'icon': Icons.terminal_rounded},
+        {'title': 'Scanner Device Test', 'route': '/omr-scanner', 'icon': Icons.camera_alt_rounded},
+        {'title': 'Attendance Sync Queue', 'route': '/attendance', 'icon': Icons.sync_rounded},
+        {'title': 'Security Audit Trail', 'route': '/audit-logs', 'icon': Icons.security_rounded},
       ];
     } else {
       // Student role
       return [
-        {'title': 'My Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
+        {'title': 'Student Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
         {'title': 'My Results & Rank Cards', 'route': '/results', 'icon': Icons.emoji_events_rounded},
-        {'title': 'My Attendance', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
-        {'title': 'Study Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
+        {'title': 'My Attendance Record', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
+        {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
-        {'title': 'Announcements', 'route': '/notifications', 'icon': Icons.notifications_rounded},
+        {'title': 'Institute Notices', 'route': '/notifications', 'icon': Icons.notifications_rounded},
       ];
     }
   }
