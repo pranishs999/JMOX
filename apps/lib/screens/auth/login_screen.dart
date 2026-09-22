@@ -1,9 +1,10 @@
-// JMO Management System — Login Screen
+// JMO Management System — Login & Credential Reset Screen
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../models/app_models.dart';
+import '../../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController(text: 'jms.hric@gmail.com');
+  final _emailController = TextEditingController(text: 'admin@jmo.org');
   final _passwordController = TextEditingController(text: 'Mathforall@JMO369');
   UserRole _selectedRole = UserRole.admin;
   String? _errorText;
@@ -40,25 +41,63 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordModal() {
+    final resetEmailCtrl = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Password Reset Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter your email or Public ID to receive reset credentials instructions.', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 13)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: resetEmailCtrl,
+              decoration: const InputDecoration(labelText: 'Email or Public ID'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              final dialogContext = context;
+              final auth = Provider.of<AuthService>(dialogContext, listen: false);
+              await auth.requestPasswordReset(resetEmailCtrl.text.trim());
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('Password reset instructions dispatched successfully.')),
+                );
+              }
+            },
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: AppColors.darkBackground,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Container(
-            width: 420,
+            width: 440,
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: const Color(0xFF111111),
+              color: AppColors.darkSurface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: AppColors.darkBorder),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -77,20 +116,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.school, size: 32, color: Color(0xFF0A0A0A)),
+                    child: const Icon(Icons.school, size: 32, color: AppColors.primaryNavy),
                   ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   'JMO Management System',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary),
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Sign in to access your dashboard & portal',
+                  'Sign in to access your portal & dashboard',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontSize: 13, color: AppColors.darkTextSecondary),
                 ),
                 const SizedBox(height: 24),
 
@@ -98,10 +137,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   children: [
                     _buildRoleTab(UserRole.admin, 'Admin', Icons.admin_panel_settings),
-                    const SizedBox(width: 8),
-                    _buildRoleTab(UserRole.teacher, 'Facilitator', Icons.psychology),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
+                    _buildRoleTab(UserRole.facilitator, 'Facilitator', Icons.psychology),
+                    const SizedBox(width: 6),
                     _buildRoleTab(UserRole.student, 'Student', Icons.person),
+                    const SizedBox(width: 6),
+                    _buildRoleTab(UserRole.technician, 'Technician', Icons.build_circle),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -111,60 +152,51 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: AppColors.accentCrimson.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.accentCrimson.withValues(alpha: 0.3)),
                     ),
-                    child: Text(_errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                    child: Text(_errorText!, style: const TextStyle(color: AppColors.accentCrimson, fontSize: 12)),
                   ),
 
                 // Form fields
-                const Text('EMAIL / USERNAME', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                const Text('EMAIL / PUBLIC ID', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _emailController,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFF0A0A0A),
-                    hintText: 'Enter your email or Public ID',
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white)),
+                  style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14),
+                  decoration: const InputDecoration(
+                    hintText: 'Enter email or Public ID (e.g. STU-98214)',
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                const Text('PASSWORD', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('PASSWORD', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                    GestureDetector(
+                      onTap: _showForgotPasswordModal,
+                      child: const Text('Forgot Password?', style: TextStyle(color: AppColors.accentIndigo, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFF0A0A0A),
+                  style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 14),
+                  decoration: const InputDecoration(
                     hintText: 'Enter password',
-                    hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Colors.white)),
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 ElevatedButton(
                   onPressed: auth.isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
                   child: auth.isLoading
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : Text('Sign In as ${_selectedRole.value.toUpperCase()}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                      : Text('Sign In as ${_selectedRole.label.toUpperCase()}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -179,21 +211,22 @@ class _LoginScreenState extends State<LoginScreen> {
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _selectedRole = role),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.04),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: isSelected ? Colors.white : Colors.white.withOpacity(0.08)),
+            color: isSelected ? AppColors.darkTextPrimary : AppColors.darkCard,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: isSelected ? AppColors.darkTextPrimary : AppColors.darkBorder),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 18, color: isSelected ? Colors.black : Colors.grey),
+              Icon(icon, size: 16, color: isSelected ? Colors.black : AppColors.darkTextSecondary),
               const SizedBox(height: 4),
               Text(
                 label,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isSelected ? Colors.black : Colors.grey),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? Colors.black : AppColors.darkTextSecondary),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -1,7 +1,6 @@
-// JMO Management System — Unified Domain Models
-import 'package:flutter/foundation.dart';
+// JMO Management System — Unified Domain Models & Role Architecture
 
-enum UserRole { admin, facilitator, mentor, student, technician }
+enum UserRole { admin, facilitator, student, technician }
 
 extension UserRoleExtension on UserRole {
   String get value {
@@ -10,8 +9,6 @@ extension UserRoleExtension on UserRole {
         return 'admin';
       case UserRole.facilitator:
         return 'facilitator';
-      case UserRole.mentor:
-        return 'mentor';
       case UserRole.student:
         return 'student';
       case UserRole.technician:
@@ -19,14 +16,33 @@ extension UserRoleExtension on UserRole {
     }
   }
 
+  String get label {
+    switch (this) {
+      case UserRole.admin:
+        return 'Admin';
+      case UserRole.facilitator:
+        return 'Facilitator';
+      case UserRole.student:
+        return 'Student';
+      case UserRole.technician:
+        return 'Technician';
+    }
+  }
+
+  bool get canPerformAcademicMutations => this != UserRole.technician && this != UserRole.student;
+  bool get canEditMarks => this == UserRole.admin || this == UserRole.facilitator;
+  bool get canEditAttendance => this == UserRole.admin || this == UserRole.facilitator;
+  bool get canChangeResults => this == UserRole.admin;
+  bool get canAccessTechnicianDiagnostics => this == UserRole.technician || this == UserRole.admin;
+
   static UserRole fromString(String roleStr) {
     switch (roleStr.toLowerCase()) {
       case 'admin':
         return UserRole.admin;
       case 'facilitator':
-        return UserRole.facilitator;
       case 'mentor':
-        return UserRole.mentor;
+      case 'teacher': // Backward compatibility alias
+        return UserRole.facilitator;
       case 'technician':
         return UserRole.technician;
       case 'student':
@@ -36,6 +52,7 @@ extension UserRoleExtension on UserRole {
     }
   }
 }
+
 
 class InstituteModel {
   final String id;
@@ -67,6 +84,16 @@ class InstituteModel {
       status: json['status'] ?? 'active',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'code': code,
+    'active_academic_year': activeAcademicYear,
+    'timezone': timezone,
+    'contact_email': contactEmail,
+    'status': status,
+  };
 }
 
 class AcademicYearModel {
@@ -75,8 +102,7 @@ class AcademicYearModel {
   final String startDate;
   final String endDate;
   final String status; // active, archived, upcoming
-  final int batchesCount;
-  final int studentsCount;
+  final bool isActive;
 
   AcademicYearModel({
     required this.id,
@@ -84,8 +110,7 @@ class AcademicYearModel {
     required this.startDate,
     required this.endDate,
     required this.status,
-    this.batchesCount = 0,
-    this.studentsCount = 0,
+    this.isActive = true,
   });
 
   factory AcademicYearModel.fromJson(Map<String, dynamic> json) {
@@ -95,164 +120,52 @@ class AcademicYearModel {
       startDate: json['start_date'] as String,
       endDate: json['end_date'] as String,
       status: json['status'] ?? 'active',
-      batchesCount: json['batches_count'] ?? 0,
-      studentsCount: json['students_count'] ?? 0,
+      isActive: json['is_active'] ?? true,
     );
   }
-}
 
-class TechnicianModel {
-  final String id;
-  final String publicId;
-  final String fullName;
-  final String email;
-  final String assignedZone;
-  final String status;
-  final bool hasAcademicControl; // Strictly false by default per specification
-
-  TechnicianModel({
-    required this.id,
-    required this.publicId,
-    required this.fullName,
-    required this.email,
-    required this.assignedZone,
-    this.status = 'active',
-    this.hasAcademicControl = false,
-  });
-
-  factory TechnicianModel.fromJson(Map<String, dynamic> json) {
-    return TechnicianModel(
-      id: json['id'] as String,
-      publicId: json['public_id'] ?? 'TECH-000',
-      fullName: json['full_name'] as String,
-      email: json['email'] as String,
-      assignedZone: json['assigned_zone'] ?? 'Hardware & Labs',
-      status: json['status'] ?? 'active',
-      hasAcademicControl: false,
-    );
-  }
-}
-
-class UserModel {
-  final String id;
-  final String publicId;
-  final String email;
-  final UserRole role;
-  final String status;
-  final String? generatedPassword;
-
-  UserModel({
-    required this.id,
-    required this.publicId,
-    required this.email,
-    required this.role,
-    required this.status,
-    this.generatedPassword,
-  });
-
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'] as String,
-      publicId: json['public_id'] ?? 'USR-000',
-      email: json['email'] as String,
-      role: UserRoleExtension.fromString(json['role'] ?? 'student'),
-      status: json['status'] ?? 'active',
-      generatedPassword: json['generated_password'],
-    );
-  }
-}
-
-class StudentModel {
-  final String id;
-  final String publicId;
-  final String fullName;
-  final String? email;
-  final String? phone;
-  final String? className;
-  final String? batchName;
-  final String status;
-  final String? generatedPassword;
-
-  StudentModel({
-    required this.id,
-    required this.publicId,
-    required this.fullName,
-    this.email,
-    this.phone,
-    this.className,
-    this.batchName,
-    this.status = 'active',
-    this.generatedPassword,
-  });
-
-  factory StudentModel.fromJson(Map<String, dynamic> json) {
-    return StudentModel(
-      id: json['id'] as String,
-      publicId: json['public_id'] ?? 'STU-000',
-      fullName: json['full_name'] as String,
-      email: json['email'],
-      phone: json['phone'],
-      className: json['class_name'] ?? json['class']?['name'],
-      batchName: json['batch_name'] ?? json['batch']?['name'],
-      status: json['status'] ?? 'active',
-      generatedPassword: json['login_password'],
-    );
-  }
-}
-
-class FacilitatorModel {
-  final String id;
-  final String publicId;
-  final String fullName;
-  final String? email;
-  final String? phone;
-  final List<String> assignedBatches;
-  final String? generatedPassword;
-
-  FacilitatorModel({
-    required this.id,
-    required this.publicId,
-    required this.fullName,
-    this.email,
-    this.phone,
-    this.assignedBatches = const [],
-    this.generatedPassword,
-  });
-
-  factory FacilitatorModel.fromJson(Map<String, dynamic> json) {
-    return FacilitatorModel(
-      id: json['id'] as String,
-      publicId: json['public_id'] ?? 'TCH-000',
-      fullName: json['full_name'] as String,
-      email: json['email'],
-      phone: json['phone'],
-      assignedBatches: (json['assigned_batches'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      generatedPassword: json['login_password'],
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'start_date': startDate,
+    'end_date': endDate,
+    'status': status,
+    'is_active': isActive,
+  };
 }
 
 class ClassModel {
   final String id;
   final String name;
-  final int batchCount;
-  final int studentCount;
+  final String academicYearId;
+  final int sortOrder;
+  final String status;
 
   ClassModel({
     required this.id,
     required this.name,
-    this.batchCount = 0,
-    this.studentCount = 0,
+    required this.academicYearId,
+    this.sortOrder = 0,
+    this.status = 'active',
   });
 
   factory ClassModel.fromJson(Map<String, dynamic> json) {
     return ClassModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      batchCount: json['batch_count'] ?? 0,
-      studentCount: json['student_count'] ?? 0,
+      academicYearId: json['academic_year_id'] ?? 'ay-1',
+      sortOrder: json['sort_order'] ?? 0,
+      status: json['status'] ?? 'active',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'academic_year_id': academicYearId,
+    'sort_order': sortOrder,
+    'status': status,
+  };
 }
 
 class BatchModel {
@@ -260,7 +173,7 @@ class BatchModel {
   final String name;
   final String classId;
   final String? className;
-  final String status;
+  final String status; // active, completed, archived
   final String? scheduleDays;
 
   BatchModel({
@@ -282,6 +195,15 @@ class BatchModel {
       scheduleDays: json['schedule_days'],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'class_id': classId,
+    'class_name': className,
+    'status': status,
+    'schedule_days': scheduleDays,
+  };
 }
 
 class SubjectModel {
@@ -290,6 +212,7 @@ class SubjectModel {
   final String code;
   final String classId;
   final String? description;
+  final String status;
 
   SubjectModel({
     required this.id,
@@ -297,6 +220,7 @@ class SubjectModel {
     required this.code,
     required this.classId,
     this.description,
+    this.status = 'active',
   });
 
   factory SubjectModel.fromJson(Map<String, dynamic> json) {
@@ -306,6 +230,204 @@ class SubjectModel {
       code: json['code'] as String,
       classId: json['class_id'] as String,
       description: json['description'],
+      status: json['status'] ?? 'active',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'code': code,
+    'class_id': classId,
+    'description': description,
+    'status': status,
+  };
+}
+
+class UserModel {
+  final String id;
+  final String publicId;
+  final String email;
+  final UserRole role;
+  final String status; // active, disabled, invited
+  final String? generatedPassword;
+
+  UserModel({
+    required this.id,
+    required this.publicId,
+    required this.email,
+    required this.role,
+    required this.status,
+    this.generatedPassword,
+  });
+
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as String,
+      publicId: json['public_id'] ?? 'USR-000',
+      email: json['email'] as String,
+      role: UserRoleExtension.fromString(json['role'] ?? 'student'),
+      status: json['status'] ?? 'active',
+      generatedPassword: json['generated_password'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'public_id': publicId,
+    'email': email,
+    'role': role.value,
+    'status': status,
+    'generated_password': generatedPassword,
+  };
+}
+
+class StudentModel {
+  final String id;
+  final String publicId;
+  final String fullName;
+  final String? email;
+  final String? phone;
+  final String? className;
+  final String? batchName;
+  final String? guardianName;
+  final String? guardianPhone;
+  final String status; // active, disabled, archived
+  final String? generatedPassword;
+  final String qrCodeData;
+
+  StudentModel({
+    required this.id,
+    required this.publicId,
+    required this.fullName,
+    this.email,
+    this.phone,
+    this.className,
+    this.batchName,
+    this.guardianName,
+    this.guardianPhone,
+    this.status = 'active',
+    this.generatedPassword,
+    String? qrCodeData,
+  }) : qrCodeData = qrCodeData ?? 'JMO-STD:$publicId:$fullName';
+
+  factory StudentModel.fromJson(Map<String, dynamic> json) {
+    final pubId = json['public_id'] ?? 'STU-000';
+    final name = json['full_name'] as String;
+    return StudentModel(
+      id: json['id'] as String,
+      publicId: pubId,
+      fullName: name,
+      email: json['email'],
+      phone: json['phone'],
+      className: json['class_name'] ?? json['class']?['name'],
+      batchName: json['batch_name'] ?? json['batch']?['name'],
+      guardianName: json['guardian_name'],
+      guardianPhone: json['guardian_phone'],
+      status: json['status'] ?? 'active',
+      generatedPassword: json['login_password'],
+      qrCodeData: json['qr_code_data'] ?? 'JMO-STD:$pubId:$name',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'public_id': publicId,
+    'full_name': fullName,
+    'email': email,
+    'phone': phone,
+    'class_name': className,
+    'batch_name': batchName,
+    'guardian_name': guardianName,
+    'guardian_phone': guardianPhone,
+    'status': status,
+    'login_password': generatedPassword,
+    'qr_code_data': qrCodeData,
+  };
+}
+
+class FacilitatorModel {
+  final String id;
+  final String publicId;
+  final String fullName;
+  final String? email;
+  final String? phone;
+  final UserRole role; // facilitator or mentor
+  final List<String> assignedBatches;
+  final List<String> assignedSubjects;
+  final String status; // active, disabled, archived
+  final String? generatedPassword;
+
+  FacilitatorModel({
+    required this.id,
+    required this.publicId,
+    required this.fullName,
+    this.email,
+    this.phone,
+    this.role = UserRole.facilitator,
+    this.assignedBatches = const [],
+    this.assignedSubjects = const [],
+    this.status = 'active',
+    this.generatedPassword,
+  });
+
+  factory FacilitatorModel.fromJson(Map<String, dynamic> json) {
+    return FacilitatorModel(
+      id: json['id'] as String,
+      publicId: json['public_id'] ?? 'FAC-000',
+      fullName: json['full_name'] as String,
+      email: json['email'],
+      phone: json['phone'],
+      role: UserRoleExtension.fromString(json['role'] ?? 'facilitator'),
+      assignedBatches: (json['assigned_batches'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      assignedSubjects: (json['assigned_subjects'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      status: json['status'] ?? 'active',
+      generatedPassword: json['login_password'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'public_id': publicId,
+    'full_name': fullName,
+    'email': email,
+    'phone': phone,
+    'role': role.value,
+    'assigned_batches': assignedBatches,
+    'assigned_subjects': assignedSubjects,
+    'status': status,
+    'login_password': generatedPassword,
+  };
+}
+
+class TechnicianModel {
+  final String id;
+  final String publicId;
+  final String fullName;
+  final String email;
+  final String assignedZone;
+  final String status;
+  final bool hasAcademicControl; // Strictly false per specification
+
+  TechnicianModel({
+    required this.id,
+    required this.publicId,
+    required this.fullName,
+    required this.email,
+    required this.assignedZone,
+    this.status = 'active',
+    this.hasAcademicControl = false,
+  });
+
+  factory TechnicianModel.fromJson(Map<String, dynamic> json) {
+    return TechnicianModel(
+      id: json['id'] as String,
+      publicId: json['public_id'] ?? 'TECH-000',
+      fullName: json['full_name'] as String,
+      email: json['email'] as String,
+      assignedZone: json['assigned_zone'] ?? 'Diagnostics & Hardware',
+      status: json['status'] ?? 'active',
+      hasAcademicControl: false,
     );
   }
 }
@@ -313,16 +435,20 @@ class SubjectModel {
 class AttendanceModel {
   final String id;
   final String studentId;
+  final String studentPublicId;
   final String studentName;
   final String sessionDate;
+  final String batchName;
   final String status; // present, absent, late, excused
   final bool isSynced;
 
   AttendanceModel({
     required this.id,
     required this.studentId,
+    required this.studentPublicId,
     required this.studentName,
     required this.sessionDate,
+    required this.batchName,
     required this.status,
     this.isSynced = true,
   });
@@ -331,35 +457,129 @@ class AttendanceModel {
     return AttendanceModel(
       id: json['id'] as String,
       studentId: json['student_id'] as String,
+      studentPublicId: json['student_public_id'] ?? 'STU-000',
       studentName: json['student_name'] ?? 'Student',
       sessionDate: json['session_date'] ?? '',
+      batchName: json['batch_name'] ?? 'Batch Alpha',
       status: json['status'] ?? 'present',
       isSynced: json['is_synced'] ?? true,
     );
   }
 }
 
+enum QuestionType {
+  mcqSingle,
+  mcqMultiple,
+  numerical,
+  textAnswer,
+  trueFalse,
+  imageChoice,
+  pattern,
+  diagram,
+  maze,
+  sudoku,
+  findDifference,
+  visualPuzzle,
+}
+
+class QuestionModel {
+  final String id;
+  final int questionNumber;
+  final String questionText;
+  final QuestionType type;
+  final List<String> options;
+  final String correctAnswer;
+  final double positiveMarks;
+  final double negativeMarks;
+  final String? questionImageUrl;
+  final String? solutionImageUrl;
+  final String? blockId; // Nullable for Section B direct questions
+
+  QuestionModel({
+    required this.id,
+    required this.questionNumber,
+    required this.questionText,
+    this.type = QuestionType.mcqSingle,
+    this.options = const ['A', 'B', 'C', 'D'],
+    required this.correctAnswer,
+    this.positiveMarks = 4.0,
+    this.negativeMarks = 1.0,
+    this.questionImageUrl,
+    this.solutionImageUrl,
+    this.blockId,
+  });
+}
+
+class OlympiadBlockModel {
+  final String id;
+  final String name; // e.g. Block 1 — Everyday Mathematics
+  final String sectionId;
+  final List<QuestionModel> questions;
+
+  OlympiadBlockModel({
+    required this.id,
+    required this.name,
+    required this.sectionId,
+    this.questions = const [],
+  });
+}
+
+class OlympiadSectionModel {
+  final String id;
+  final String name; // Section A, Section B, Section C
+  final List<OlympiadBlockModel> blocks; // Can be empty if questions exist directly
+  final List<QuestionModel> directQuestions; // For Section B direct questions
+
+  OlympiadSectionModel({
+    required this.id,
+    required this.name,
+    this.blocks = const [],
+    this.directQuestions = const [],
+  });
+}
+
 class OlympiadModel {
   final String id;
   final String name;
   final String eventDate;
-  final String status; // draft, in_progress, published
+  final String status; // draft, scheduled, in_progress, evaluated, published
+  final int totalMarks; // Default 50
+  final List<OlympiadSectionModel> sections;
 
   OlympiadModel({
     required this.id,
     required this.name,
     required this.eventDate,
     required this.status,
+    this.totalMarks = 50,
+    this.sections = const [],
   });
+}
 
-  factory OlympiadModel.fromJson(Map<String, dynamic> json) {
-    return OlympiadModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      eventDate: json['event_date'] ?? '',
-      status: json['status'] ?? 'draft',
-    );
-  }
+class OnlineExamModel {
+  final String id;
+  final String title;
+  final String classId;
+  final String className;
+  final String startTime;
+  final String endTime;
+  final int durationMinutes;
+  final String status; // Draft, Scheduled, Published, Live, Paused, Completed, Closed, Archived
+  final int totalMarks;
+  final int totalQuestions;
+
+  OnlineExamModel({
+    required this.id,
+    required this.title,
+    required this.classId,
+    required this.className,
+    required this.startTime,
+    required this.endTime,
+    required this.durationMinutes,
+    required this.status,
+    this.totalMarks = 50,
+    this.totalQuestions = 15,
+  });
 }
 
 class ResultModel {
@@ -368,8 +588,9 @@ class ResultModel {
   final String studentPublicId;
   final String olympiadName;
   final double totalScore;
-  final int overallRank;
+  final int overallRank; // Standard Competition Ranking 1, 2, 2, 4
   final String award;
+  final Map<String, double> sectionScores;
 
   ResultModel({
     required this.id,
@@ -379,19 +600,8 @@ class ResultModel {
     required this.totalScore,
     required this.overallRank,
     required this.award,
+    this.sectionScores = const {},
   });
-
-  factory ResultModel.fromJson(Map<String, dynamic> json) {
-    return ResultModel(
-      id: json['id'] as String,
-      studentName: json['student_name'] ?? json['student']?['full_name'] ?? 'Candidate',
-      studentPublicId: json['student_public_id'] ?? json['student']?['public_id'] ?? 'STU-000',
-      olympiadName: json['olympiad_name'] ?? 'Olympiad Assessment',
-      totalScore: (json['total_score'] as num?)?.toDouble() ?? 0.0,
-      overallRank: json['overall_rank'] ?? 1,
-      award: json['award'] ?? 'Participation Certificate',
-    );
-  }
 }
 
 class MaterialModel {
@@ -400,6 +610,7 @@ class MaterialModel {
   final String fileUrl;
   final String? description;
   final String createdAt;
+  final String status; // active, archived
 
   MaterialModel({
     required this.id,
@@ -407,17 +618,8 @@ class MaterialModel {
     required this.fileUrl,
     this.description,
     required this.createdAt,
+    this.status = 'active',
   });
-
-  factory MaterialModel.fromJson(Map<String, dynamic> json) {
-    return MaterialModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      fileUrl: json['file_url'] as String,
-      description: json['description'],
-      createdAt: json['created_at'] ?? '',
-    );
-  }
 }
 
 class BookModel {
@@ -427,6 +629,7 @@ class BookModel {
   final String? coverImageUrl;
   final String? linkUrl;
   final String? description;
+  final String status; // active, archived
 
   BookModel({
     required this.id,
@@ -435,48 +638,35 @@ class BookModel {
     this.coverImageUrl,
     this.linkUrl,
     this.description,
+    this.status = 'active',
   });
-
-  factory BookModel.fromJson(Map<String, dynamic> json) {
-    return BookModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      author: json['author'],
-      coverImageUrl: json['cover_image_url'],
-      linkUrl: json['link_url'],
-      description: json['description'],
-    );
-  }
 }
 
 class NotificationModel {
   final String id;
   final String title;
   final String message;
-  final String targetRole;
+  final String targetRole; // all, facilitators, students
+  final String? targetBatchId;
+  final String status; // Draft, Scheduled, Sending, Sent, Failed, Cancelled, Archived
   final String createdAt;
+  final String? scheduledAt;
 
   NotificationModel({
     required this.id,
     required this.title,
     required this.message,
     required this.targetRole,
+    this.targetBatchId,
+    this.status = 'Sent',
     required this.createdAt,
+    this.scheduledAt,
   });
-
-  factory NotificationModel.fromJson(Map<String, dynamic> json) {
-    return NotificationModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      targetRole: json['target_role'] ?? 'all',
-      createdAt: json['created_at'] ?? '',
-    );
-  }
 }
 
 class AuditLogModel {
   final String id;
+  final String actorPublicId;
   final String action;
   final String entityType;
   final bool isConflict;
@@ -484,19 +674,30 @@ class AuditLogModel {
 
   AuditLogModel({
     required this.id,
+    this.actorPublicId = 'USR-SA-001',
     required this.action,
     required this.entityType,
     required this.isConflict,
     required this.createdAt,
   });
-
-  factory AuditLogModel.fromJson(Map<String, dynamic> json) {
-    return AuditLogModel(
-      id: json['id'] as String,
-      action: json['action'] as String,
-      entityType: json['entity_type'] ?? 'general',
-      isConflict: json['is_conflict'] ?? false,
-      createdAt: json['created_at'] ?? '',
-    );
-  }
 }
+
+// Domain Model Aliases
+typedef Student = StudentModel;
+typedef Facilitator = FacilitatorModel;
+typedef Institute = InstituteModel;
+typedef AcademicYear = AcademicYearModel;
+typedef ClassItem = ClassModel;
+typedef Batch = BatchModel;
+typedef Subject = SubjectModel;
+typedef QuestionItem = QuestionModel;
+typedef OlympiadBlock = OlympiadBlockModel;
+typedef OlympiadSection = OlympiadSectionModel;
+typedef Olympiad = OlympiadModel;
+typedef OnlineExam = OnlineExamModel;
+typedef Result = ResultModel;
+typedef MaterialItem = MaterialModel;
+typedef Book = BookModel;
+typedef NotificationItem = NotificationModel;
+typedef AuditLog = AuditLogModel;
+

@@ -1,15 +1,18 @@
 // JMO Management System — Declarative App Router
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/app_shell.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/dashboard/home_dashboard.dart';
+import '../screens/admin/institute_crud_screens.dart';
 import '../screens/students/students_screen.dart';
-import '../screens/academics/subjects_screen.dart';
+import '../screens/facilitators/facilitators_screen.dart';
 import '../screens/attendance/attendance_screen.dart';
 import '../screens/assessment/omr_scanner_screen.dart';
 import '../screens/assessment/results_screen.dart';
+import '../screens/assessment/problem_sets_screen.dart';
+import '../screens/assessment/online_exams_screen.dart';
 import '../screens/resources/resources_screens.dart';
+import '../screens/notifications/notifications_management_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -26,35 +29,35 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => const HomeDashboard(),
         ),
         GoRoute(
+          path: '/institutes',
+          builder: (context, state) => const InstituteCrudScreen(),
+        ),
+        GoRoute(
           path: '/students',
           builder: (context, state) => const StudentsScreen(),
         ),
         GoRoute(
-          path: '/teachers',
-          builder: (context, state) => const StudentsScreen(), // Reuses student/facilitator directory layout
-        ),
-        GoRoute(
-          path: '/classes',
-          builder: (context, state) => const SubjectsScreen(),
-        ),
-        GoRoute(
-          path: '/batches',
-          builder: (context, state) => const SubjectsScreen(),
-        ),
-        GoRoute(
-          path: '/subjects',
-          builder: (context, state) => const SubjectsScreen(),
+          path: '/facilitators',
+          builder: (context, state) => const FacilitatorsScreen(),
         ),
         GoRoute(
           path: '/attendance',
           builder: (context, state) => const AttendanceScreen(),
         ),
         GoRoute(
-          path: '/olympiads',
-          builder: (context, state) => const ResultsScreen(),
+          path: '/problem-sets',
+          builder: (context, state) => const ProblemSetsScreen(),
         ),
         GoRoute(
-          path: '/results',
+          path: '/examinations/online',
+          builder: (context, state) => const OnlineExamsScreen(),
+        ),
+        GoRoute(
+          path: '/examinations/omr',
+          builder: (context, state) => const OmrScannerScreen(),
+        ),
+        GoRoute(
+          path: '/examinations/results',
           builder: (context, state) => const ResultsScreen(),
         ),
         GoRoute(
@@ -67,15 +70,11 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: '/notifications',
-          builder: (context, state) => const NotificationsScreen(),
+          builder: (context, state) => const NotificationsManagementScreen(),
         ),
         GoRoute(
           path: '/audit-logs',
           builder: (context, state) => const AuditLogsScreen(),
-        ),
-        GoRoute(
-          path: '/omr-scanner',
-          builder: (context, state) => const OmrScannerScreen(),
         ),
       ],
     ),

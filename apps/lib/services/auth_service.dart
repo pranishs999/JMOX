@@ -1,4 +1,4 @@
-// JMO Management System — Authentication & Role State Manager
+// JMO Management System — Authentication & RBAC Service
 import 'package:flutter/foundation.dart';
 import '../models/app_models.dart';
 
@@ -12,11 +12,11 @@ class AuthService extends ChangeNotifier {
   UserRole get role => _currentUser?.role ?? UserRole.student;
 
   AuthService() {
-    // Default logged in as Super Admin for instant dev review
+    // Default logged in as Admin for development review
     _currentUser = UserModel(
       id: 'usr-admin-1',
       publicId: 'USR-SA-001',
-      email: 'jms.hric@gmail.com',
+      email: 'admin@jmo.org',
       role: UserRole.admin,
       status: 'active',
     );
@@ -26,9 +26,8 @@ class AuthService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    // Demo authentication handling
     String publicId = 'USR-SA-001';
     switch (selectedRole) {
       case UserRole.admin:
@@ -36,9 +35,6 @@ class AuthService extends ChangeNotifier {
         break;
       case UserRole.facilitator:
         publicId = 'FAC-41029';
-        break;
-      case UserRole.mentor:
-        publicId = 'MNT-32018';
         break;
       case UserRole.technician:
         publicId = 'TECH-7701';
@@ -51,10 +47,32 @@ class AuthService extends ChangeNotifier {
     _currentUser = UserModel(
       id: 'usr-demo-1',
       publicId: publicId,
-      email: email.isNotEmpty ? email : 'admin@jmo.org',
+      email: email.isNotEmpty ? email : '${selectedRole.value}@jmo.org',
       role: selectedRole,
       status: 'active',
     );
+
+    _isLoading = false;
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> requestPasswordReset(String email) async {
+    _isLoading = true;
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    _isLoading = false;
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 600));
 
     _isLoading = false;
     notifyListeners();
@@ -70,9 +88,6 @@ class AuthService extends ChangeNotifier {
         break;
       case UserRole.facilitator:
         publicId = 'FAC-41029';
-        break;
-      case UserRole.mentor:
-        publicId = 'MNT-32018';
         break;
       case UserRole.technician:
         publicId = 'TECH-7701';

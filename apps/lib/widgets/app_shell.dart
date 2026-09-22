@@ -1,9 +1,10 @@
-// JMO Management System — Unified Cross-Platform App Shell Layout
+// JMO Management System — Unified Cross-Platform App Shell & Navigation Layout
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
 import '../models/app_models.dart';
+import '../theme/app_theme.dart';
 
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -17,9 +18,9 @@ class AppShell extends StatelessWidget {
     final currentRoute = GoRouterState.of(context).uri.toString();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: AppColors.darkSurface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: Row(
@@ -30,7 +31,7 @@ class AppShell extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.school, color: Color(0xFF0A0A0A), size: 20),
+              child: const Icon(Icons.school, color: AppColors.primaryNavy, size: 20),
             ),
             const SizedBox(width: 12),
             Column(
@@ -38,47 +39,47 @@ class AppShell extends StatelessWidget {
               children: [
                 const Text(
                   'JMO Portal',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkTextPrimary),
                 ),
                 Text(
-                  'Unified System (${auth.role.value.toUpperCase()})',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  'Institute Platform (${auth.role.label.toUpperCase()})',
+                  style: const TextStyle(fontSize: 11, color: AppColors.darkTextSecondary),
                 ),
               ],
             ),
           ],
         ),
         actions: [
-          // Role Quick Switcher for Demo & Testing
+          // Quick Role Switcher (Dev Review)
           PopupMenuButton<UserRole>(
             tooltip: 'Switch User Role',
             icon: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: AppColors.darkCard,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.white.withOpacity(0.12)),
+                border: Border.all(color: AppColors.darkBorder),
               ),
               child: Row(
                 children: [
                   Icon(
                     auth.role == UserRole.admin
                         ? Icons.admin_panel_settings
-                        : (auth.role == UserRole.facilitator || auth.role == UserRole.mentor)
+                        : auth.role == UserRole.facilitator
                             ? Icons.psychology
                             : auth.role == UserRole.technician
                                 ? Icons.build_circle
                                 : Icons.person,
                     size: 16,
-                    color: Colors.amber,
+                    color: AppColors.accentGold,
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    auth.role.value.toUpperCase(),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                    auth.role.label.toUpperCase(),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.darkTextPrimary),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down, size: 16, color: Colors.grey),
+                  const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.darkTextSecondary),
                 ],
               ),
             ),
@@ -88,7 +89,7 @@ class AppShell extends StatelessWidget {
                 value: UserRole.admin,
                 child: Row(
                   children: [
-                    Icon(Icons.admin_panel_settings, size: 18, color: Colors.amber),
+                    Icon(Icons.admin_panel_settings, size: 18, color: AppColors.accentGold),
                     SizedBox(width: 8),
                     Text('Admin View'),
                   ],
@@ -98,19 +99,9 @@ class AppShell extends StatelessWidget {
                 value: UserRole.facilitator,
                 child: Row(
                   children: [
-                    Icon(Icons.psychology, size: 18, color: Colors.blue),
+                    Icon(Icons.psychology, size: 18, color: AppColors.accentIndigo),
                     SizedBox(width: 8),
                     Text('Facilitator View'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: UserRole.mentor,
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_stories, size: 18, color: Colors.teal),
-                    SizedBox(width: 8),
-                    Text('Mentor View'),
                   ],
                 ),
               ),
@@ -118,7 +109,7 @@ class AppShell extends StatelessWidget {
                 value: UserRole.student,
                 child: Row(
                   children: [
-                    Icon(Icons.person, size: 18, color: Color(0xFF10B981)),
+                    Icon(Icons.person, size: 18, color: AppColors.accentEmerald),
                     SizedBox(width: 8),
                     Text('Student View'),
                   ],
@@ -138,7 +129,7 @@ class AppShell extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.grey, size: 20),
+            icon: const Icon(Icons.logout, color: AppColors.darkTextSecondary, size: 20),
             onPressed: () {
               auth.logout();
               context.go('/login');
@@ -152,10 +143,10 @@ class AppShell extends StatelessWidget {
         children: [
           if (isDesktop)
             Container(
-              width: 240,
+              width: 250,
               decoration: const BoxDecoration(
-                color: Color(0xFF111111),
-                border: Border(right: BorderSide(color: Color(0xFF222222))),
+                color: AppColors.darkSurface,
+                border: Border(right: BorderSide(color: AppColors.darkBorder)),
               ),
               child: _buildNavContent(context, auth, currentRoute),
             ),
@@ -172,8 +163,8 @@ class AppShell extends StatelessWidget {
   Widget _buildNavContent(BuildContext context, AuthService auth, String currentRoute) {
     final navItems = _getNavItems(auth.role);
 
-    return Container(
-      color: const Color(0xFF111111),
+    return Material(
+      color: AppColors.darkSurface,
       child: Column(
         children: [
           const SizedBox(height: 16),
@@ -183,10 +174,10 @@ class AppShell extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: Colors.white.withOpacity(0.1),
+                  backgroundColor: AppColors.darkCard,
                   child: Text(
                     auth.currentUser?.email.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -196,11 +187,11 @@ class AppShell extends StatelessWidget {
                     children: [
                       Text(
                         auth.currentUser?.publicId ?? 'USR-000',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: AppColors.darkTextPrimary, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         auth.currentUser?.email ?? '',
-                        style: const TextStyle(color: Colors.grey, fontSize: 11),
+                        style: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 11),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -209,7 +200,7 @@ class AppShell extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(color: Color(0xFF222222), height: 24),
+          const Divider(color: AppColors.darkBorder, height: 24),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -224,16 +215,16 @@ class AppShell extends StatelessWidget {
                     dense: true,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     selected: isActive,
-                    selectedTileColor: Colors.white,
+                    selectedTileColor: AppColors.darkTextPrimary,
                     leading: Icon(
                       item['icon'] as IconData,
-                      size: 20,
-                      color: isActive ? Colors.black : Colors.grey,
+                      size: 18,
+                      color: isActive ? Colors.black : AppColors.darkTextSecondary,
                     ),
                     title: Text(
                       item['title'] as String,
                       style: TextStyle(
-                        color: isActive ? Colors.black : Colors.grey[300],
+                        color: isActive ? Colors.black : AppColors.darkTextPrimary,
                         fontSize: 13,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                       ),
@@ -257,43 +248,45 @@ class AppShell extends StatelessWidget {
   List<Map<String, dynamic>> _getNavItems(UserRole role) {
     if (role == UserRole.admin) {
       return [
-        {'title': 'Institute Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
+        {'title': 'Institute Overview', 'route': '/', 'icon': Icons.dashboard_rounded},
+        {'title': 'Institute Structure', 'route': '/institutes', 'icon': Icons.school_rounded},
         {'title': 'Student Directory', 'route': '/students', 'icon': Icons.people_alt_rounded},
-        {'title': 'Facilitators & Mentors', 'route': '/teachers', 'icon': Icons.badge_rounded},
-        {'title': 'Classes', 'route': '/classes', 'icon': Icons.school_rounded},
-        {'title': 'Batches', 'route': '/batches', 'icon': Icons.grid_view_rounded},
-        {'title': 'Subjects', 'route': '/subjects', 'icon': Icons.menu_book_rounded},
-        {'title': 'Attendance', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
-        {'title': 'Olympiads & Exams', 'route': '/olympiads', 'icon': Icons.emoji_events_rounded},
-        {'title': 'Rankings & Results', 'route': '/results', 'icon': Icons.military_tech_rounded},
+        {'title': 'Facilitator Directory', 'route': '/facilitators', 'icon': Icons.badge_rounded},
+        {'title': 'Attendance Sessions', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
+        {'title': 'Problem Sets Builder', 'route': '/problem-sets', 'icon': Icons.assignment_rounded},
+        {'title': 'Online Examinations', 'route': '/examinations/online', 'icon': Icons.laptop_chromebook_rounded},
+        {'title': 'OMR Camera Scanner', 'route': '/examinations/omr', 'icon': Icons.camera_alt_rounded},
+        {'title': 'Rankings & Leaderboards', 'route': '/examinations/results', 'icon': Icons.military_tech_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
         {'title': 'Notifications', 'route': '/notifications', 'icon': Icons.notifications_active_rounded},
-        {'title': 'Audit Logs', 'route': '/audit-logs', 'icon': Icons.security_rounded},
+        {'title': 'Security Audit Trail', 'route': '/audit-logs', 'icon': Icons.security_rounded},
       ];
-    } else if (role == UserRole.facilitator || role == UserRole.mentor) {
+    } else if (role == UserRole.facilitator) {
       return [
         {'title': 'Facilitator Portal', 'route': '/', 'icon': Icons.dashboard_rounded},
         {'title': 'Assigned Batches & Students', 'route': '/students', 'icon': Icons.groups_rounded},
         {'title': 'Attendance Marking', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
-        {'title': 'OMR Camera Scanner', 'route': '/omr-scanner', 'icon': Icons.camera_alt_rounded},
-        {'title': 'Olympiad Results', 'route': '/results', 'icon': Icons.military_tech_rounded},
+        {'title': 'OMR Camera Scanner', 'route': '/examinations/omr', 'icon': Icons.camera_alt_rounded},
+        {'title': 'Online Tests', 'route': '/examinations/online', 'icon': Icons.laptop_chromebook_rounded},
+        {'title': 'Olympiad Results', 'route': '/examinations/results', 'icon': Icons.military_tech_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
-        {'title': 'Books Catalog', 'route': '/books', 'icon': Icons.book_rounded},
+        {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
       ];
     } else if (role == UserRole.technician) {
-      // Technician: Diagnostics, sync queue, device calibration, audit trail - NO academic edit control
+      // Technician: Strictly technical diagnostics, no academic edit access
       return [
         {'title': 'Diagnostics Console', 'route': '/', 'icon': Icons.terminal_rounded},
-        {'title': 'Scanner Device Test', 'route': '/omr-scanner', 'icon': Icons.camera_alt_rounded},
+        {'title': 'Scanner Device Test', 'route': '/examinations/omr', 'icon': Icons.camera_alt_rounded},
         {'title': 'Attendance Sync Queue', 'route': '/attendance', 'icon': Icons.sync_rounded},
         {'title': 'Security Audit Trail', 'route': '/audit-logs', 'icon': Icons.security_rounded},
       ];
     } else {
-      // Student role
+      // Student
       return [
         {'title': 'Student Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
-        {'title': 'My Results & Rank Cards', 'route': '/results', 'icon': Icons.emoji_events_rounded},
+        {'title': 'My Results & Rank Cards', 'route': '/examinations/results', 'icon': Icons.emoji_events_rounded},
+        {'title': 'Online Exams', 'route': '/examinations/online', 'icon': Icons.laptop_chromebook_rounded},
         {'title': 'My Attendance Record', 'route': '/attendance', 'icon': Icons.fact_check_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},

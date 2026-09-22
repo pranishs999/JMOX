@@ -1,31 +1,16 @@
 // JMO Management System — Pure Flutter Application Entrypoint
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/auth_service.dart';
+import 'services/supabase_service.dart';
 import 'router/app_router.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase Client with environment configuration
   try {
-    const supabaseUrl = String.fromEnvironment(
-      'SUPABASE_URL',
-      defaultValue: 'https://amqawozipvfjgrojpvar.supabase.co',
-    );
-    const supabaseAnonKey = String.fromEnvironment(
-      'SUPABASE_ANON_KEY',
-      defaultValue: '',
-    );
-    if (supabaseAnonKey.isNotEmpty) {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        anonKey: supabaseAnonKey,
-      );
-    } else {
-      debugPrint('Supabase notice: SUPABASE_ANON_KEY not set. Running in local mock fallback mode.');
-    }
+    await SupabaseService.initialize();
   } catch (e) {
     debugPrint('Supabase init notice: Running with local mock fallback mode ($e).');
   }
@@ -49,18 +34,9 @@ class JmoxApp extends StatelessWidget {
       title: 'JMO Management System',
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.white,
-          secondary: Colors.amber,
-          surface: Color(0xFF111111),
-          background: Color(0xFF0A0A0A),
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto',
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark, // Default to clean dark academic theme
     );
   }
 }
