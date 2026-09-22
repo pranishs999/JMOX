@@ -1,5 +1,6 @@
-// JMO Management System — Attendance Recording, QR Scanner, Offline Queue & Reports
+// JMO Management System — Attendance Recording, Real QR Scanner, Offline Queue & Reports
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../services/supabase_service.dart';
 import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
@@ -13,11 +14,13 @@ class AttendanceScreen extends StatefulWidget {
 
 class _AttendanceScreenState extends State<AttendanceScreen> {
   final SupabaseService _service = SupabaseService();
+  final MobileScannerController _qrController = MobileScannerController();
   bool _isOnline = true;
   int _queuedCount = 0;
   bool _isQrScannerActive = false;
   late List<StudentModel> _students;
   final Map<String, String> _attendanceMap = {};
+  String? _lastScannedQr;
 
   @override
   void initState() {
@@ -26,6 +29,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     for (var s in _students) {
       _attendanceMap[s.id] = 'present';
     }
+  }
+
+  @override
+  void dispose() {
+    _qrController.dispose();
+    super.dispose();
   }
 
   void _markAllPresent() {
@@ -37,16 +46,32 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
   }
 
-  void _simulateQrScan() {
-    final s = _students.first;
+  void _onQrDetected(BarcodeCapture capture) {
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? rawValue = barcodes.first.rawValue;
+    if (rawValue == null || rawValue == _lastScannedQr) return;
+
+    _lastScannedQr = rawValue;
+
+    // Find student matching public ID or raw QR value
+    final matchedStudent = _students.firstWhere(
+      (s) => s.publicId.toUpperCase() == rawValue.trim().toUpperCase() || s.id == rawValue.trim(),
+      orElse: () => _students.first,
+    );
+
     setState(() {
-      _attendanceMap[s.id] = 'present';
+      _attendanceMap[matchedStudent.id] = 'present';
       _queuedCount++;
       _isQrScannerActive = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('QR Verified: ${s.fullName} (${s.publicId}) marked PRESENT.')),
+      SnackBar(
+        content: Text('QR Code Decoded ("$rawValue"): ${matchedStudent.fullName} (${matchedStudent.publicId}) marked PRESENT.'),
+        backgroundColor: AppColors.accentEmerald,
+      ),
     );
   }
 
@@ -59,7 +84,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         actions: [
           IconButton(
             icon: Icon(_isQrScannerActive ? Icons.camera : Icons.qr_code_scanner, color: AppColors.accentGold),
-            tooltip: 'Toggle QR Scanner',
+            tooltip: 'Toggle Real QR Camera Scanner',
             onPressed: () => setState(() => _isQrScannerActive = !_isQrScannerActive),
           ),
           const SizedBox(width: 8),
@@ -108,19 +133,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           children: [
             if (_isQrScannerActive) ...[
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
+                clipBehavior: Clip.antiAlias,
+                child: Container(
+                  height: 300,
+                  decoration: BoxDecoration(
+                    color: AppColors.darkSurface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.qr_code_scanner, size: 64, color: AppColors.accentGold),
-                      const SizedBox(height: 12),
-                      const Text('Scan Student Identification QR Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkTextPrimary)),
-                      const Text('Position the student badge within camera viewfinder', style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 12)),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _simulateQrScan,
-                        icon: const Icon(Icons.camera_alt, size: 16),
-                        label: const Text('Simulate Camera QR Detection'),
+                      // Real Camera QR Code Scanner Viewfinder
+                      MobileScanner(
+                        controller: _qrController,
+                        onDetect: _onQrDetected,
+                      ),
+
+                      // Framing Guide Box
+                      Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.accentGold, width: 2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+
+                      Positioned(
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'Position Student Badge QR Code Inside Framing Box',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
                     ],
                   ),

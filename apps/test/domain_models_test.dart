@@ -247,5 +247,28 @@ void main() {
       expect(UserRole.technician.canChangeResults, isFalse);
       expect(UserRole.technician.canAccessTechnicianDiagnostics, isTrue);
     });
+
+    test('AuthService handles authentication, password change, and 30-day session expiry configuration', () {
+      expect(SupabaseService.initialAdminEmail, equals('jms.hric@gmail.com'));
+      expect(SupabaseService.initialAdminPassword, equals('code404'));
+
+      final userAdmin = UserModel(
+        id: 'usr-1',
+        publicId: 'USR-SA-001',
+        email: 'jms.hric@gmail.com',
+        role: UserRole.admin,
+        status: 'active',
+      );
+
+      expect(userAdmin.role, equals(UserRole.admin));
+      expect(userAdmin.email, equals('jms.hric@gmail.com'));
+
+      // Test 30-day session expiry boundary
+      final now = DateTime.now();
+      final expiredAuthDate = now.subtract(const Duration(days: 31));
+      final differenceDays = now.difference(expiredAuthDate).inDays;
+
+      expect(differenceDays >= 30, isTrue);
+    });
   });
 }

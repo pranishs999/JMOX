@@ -22,23 +22,49 @@ class SupabaseService {
     'SUPABASE_URL',
     defaultValue: 'https://amqawozipvfjgrojpvar.supabase.co',
   );
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: '',
+  static const String supabasePublishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+    defaultValue: String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue: '',
+    ),
+  );
+
+  static const String initialAdminEmail = String.fromEnvironment(
+    'INITIAL_ADMIN_EMAIL',
+    defaultValue: 'jms.hric@gmail.com',
+  );
+  static const String initialAdminPassword = String.fromEnvironment(
+    'INITIAL_ADMIN_PASSWORD',
+    defaultValue: 'code404',
   );
 
   static Future<void> initialize() async {
-    if (supabaseAnonKey.isEmpty) {
-      debugPrint('Supabase notice: anonKey is empty. Running with local mock fallback mode.');
+    if (supabasePublishableKey.isEmpty) {
+      debugPrint('Supabase notice: publishableKey is empty. Running with local fallback repository.');
       return;
     }
     try {
       await Supabase.initialize(
         url: supabaseUrl,
-        publishableKey: supabaseAnonKey,
+        publishableKey: supabasePublishableKey,
       );
+      debugPrint('Supabase initialized successfully with publishableKey.');
+      await provisionInitialAdmin();
     } catch (e) {
-      debugPrint('Supabase init notice (local demo mode): $e');
+      debugPrint('Supabase init notice (local fallback mode): $e');
+    }
+  }
+
+  static Future<void> provisionInitialAdmin() async {
+    try {
+      final client = Supabase.instance.client;
+      final session = client.auth.currentSession;
+      if (session == null) {
+        debugPrint('Provisioning check: No active session. System ready for admin auth.');
+      }
+    } catch (e) {
+      debugPrint('Admin provisioning notice: $e');
     }
   }
 

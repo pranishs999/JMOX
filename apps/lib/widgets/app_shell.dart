@@ -246,6 +246,10 @@ class AppShell extends StatelessWidget {
   }
 
   List<Map<String, dynamic>> _getNavItems(UserRole role) {
+    final List<Map<String, dynamic>> baseItems = [
+      {'title': 'Change Password', 'route': '/settings/change-password', 'icon': Icons.lock_reset_rounded},
+    ];
+
     if (role == UserRole.admin) {
       return [
         {'title': 'Institute Overview', 'route': '/', 'icon': Icons.dashboard_rounded},
@@ -261,6 +265,7 @@ class AppShell extends StatelessWidget {
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
         {'title': 'Notifications', 'route': '/notifications', 'icon': Icons.notifications_active_rounded},
         {'title': 'Security Audit Trail', 'route': '/audit-logs', 'icon': Icons.security_rounded},
+        ...baseItems,
       ];
     } else if (role == UserRole.facilitator) {
       return [
@@ -272,17 +277,17 @@ class AppShell extends StatelessWidget {
         {'title': 'Olympiad Results', 'route': '/examinations/results', 'icon': Icons.military_tech_rounded},
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
+        ...baseItems,
       ];
     } else if (role == UserRole.technician) {
-      // Technician: Strictly technical diagnostics, no academic edit access
       return [
         {'title': 'Diagnostics Console', 'route': '/', 'icon': Icons.terminal_rounded},
         {'title': 'Scanner Device Test', 'route': '/examinations/omr', 'icon': Icons.camera_alt_rounded},
         {'title': 'Attendance Sync Queue', 'route': '/attendance', 'icon': Icons.sync_rounded},
         {'title': 'Security Audit Trail', 'route': '/audit-logs', 'icon': Icons.security_rounded},
+        ...baseItems,
       ];
     } else {
-      // Student
       return [
         {'title': 'Student Dashboard', 'route': '/', 'icon': Icons.dashboard_rounded},
         {'title': 'My Results & Rank Cards', 'route': '/examinations/results', 'icon': Icons.emoji_events_rounded},
@@ -291,6 +296,7 @@ class AppShell extends StatelessWidget {
         {'title': 'Learning Materials', 'route': '/materials', 'icon': Icons.folder_zip_rounded},
         {'title': 'Recommended Books', 'route': '/books', 'icon': Icons.book_rounded},
         {'title': 'Institute Notices', 'route': '/notifications', 'icon': Icons.notifications_rounded},
+        ...baseItems,
       ];
     }
   }

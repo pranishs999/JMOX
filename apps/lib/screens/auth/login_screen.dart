@@ -14,8 +14,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController(text: 'admin@jmo.org');
-  final _passwordController = TextEditingController(text: 'Mathforall@JMO369');
+  final _emailController = TextEditingController(text: 'jms.hric@gmail.com');
+  final _passwordController = TextEditingController(text: 'code404');
   UserRole _selectedRole = UserRole.admin;
   String? _errorText;
 
@@ -36,8 +36,14 @@ class _LoginScreenState extends State<LoginScreen> {
       selectedRole: _selectedRole,
     );
 
-    if (success && mounted) {
-      context.go('/');
+    if (mounted) {
+      if (success) {
+        context.go('/');
+      } else {
+        setState(() {
+          _errorText = auth.authError ?? 'Authentication failed. Please verify credentials.';
+        });
+      }
     }
   }
 

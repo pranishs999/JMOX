@@ -1,4 +1,4 @@
-// JMO Management System — Declarative App Router
+// JMO Management System — Declarative App Router & Auth Guards
 import 'package:go_router/go_router.dart';
 import '../widgets/app_shell.dart';
 import '../screens/auth/login_screen.dart';
@@ -13,6 +13,7 @@ import '../screens/assessment/problem_sets_screen.dart';
 import '../screens/assessment/online_exams_screen.dart';
 import '../screens/resources/resources_screens.dart';
 import '../screens/notifications/notifications_management_screen.dart';
+import '../screens/settings/change_password_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
@@ -27,6 +28,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/',
           builder: (context, state) => const HomeDashboard(),
+        ),
+        GoRoute(
+          path: '/settings/change-password',
+          builder: (context, state) => const ChangePasswordScreen(),
         ),
         GoRoute(
           path: '/institutes',
@@ -80,3 +85,4 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+
